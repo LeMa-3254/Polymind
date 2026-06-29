@@ -2,8 +2,15 @@ name: Polymind Daily
 
 on:
   workflow_dispatch:
+    inputs:
+      weekly_synthesis:
+        description: "Generate weekly synthesis"
+        required: false
+        default: false
+        type: boolean
   schedule:
     - cron: "17 13 * * *"
+    - cron: "37 14 * * 1"
 
 permissions:
   contents: write
@@ -41,7 +48,12 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
-        run: python pipeline/run.py --config targeting.yaml --db data/tracker.db
+        run: |
+          if [ "${{ github.event.schedule }}" = "37 14 * * 1" ] || [ "${{ inputs.weekly_synthesis }}" = "true" ]; then
+            python pipeline/run.py --config targeting.yaml --db data/tracker.db --weekly-synthesis
+          else
+            python pipeline/run.py --config targeting.yaml --db data/tracker.db
+          fi
 
       - name: Build static site
         run: python site/build.py --config targeting.yaml --db data/tracker.db --output public

@@ -174,18 +174,23 @@ sources:
         url: "https://www.nature.com/natcomputsci.rss"
       - name: "Nature Materials"
         url: "https://www.nature.com/nmat.rss"
-      - name: "Digital Discovery (RSC)"
-        url: "https://pubs.rsc.org/en/Journals/getrssfeed?journalcode=DD"   # verify
-      - name: "Macromolecules (ACS)"
-        url: "https://pubs.acs.org/action/showFeed?type=etoc&feed=rss&jc=mamobx"
-      - name: "Chemistry of Materials (ACS)"
-        url: "https://pubs.acs.org/action/showFeed?type=etoc&feed=rss&jc=cmatex"
-      - name: "J. Chem. Inf. Model. (ACS)"
-        url: "https://pubs.acs.org/action/showFeed?type=etoc&feed=rss&jc=jcisd8"
       - name: "Matter (Cell Press)"
         url: "https://www.cell.com/matter/current.rss"                       # verify
       - name: "Science Advances"
         url: "https://www.science.org/action/showFeed?type=etoc&feed=rss&jc=sciadv"  # verify
+    disabled_feeds:
+      - name: "Digital Discovery (RSC)"
+        url: "https://feeds.rsc.org/rss/dd"
+        reason: "Replacement RSS link currently fails TLS in live smoke tests; revisit before enabling."
+      - name: "Macromolecules (ACS)"
+        url: "https://pubs.acs.org/action/showFeed?type=etoc&feed=rss&jc=mamobx"
+        reason: "ACS RSS returns HTTP 403 in live smoke tests."
+      - name: "Chemistry of Materials (ACS)"
+        url: "https://pubs.acs.org/action/showFeed?type=etoc&feed=rss&jc=cmatex"
+        reason: "ACS RSS returns HTTP 403 in live smoke tests."
+      - name: "J. Chem. Inf. Model. (ACS)"
+        url: "https://pubs.acs.org/action/showFeed?type=etoc&feed=rss&jc=jcisd8"
+        reason: "ACS RSS returns HTTP 403 in live smoke tests."
 
   # -- Tier B: labs & research orgs --
   org_blogs:

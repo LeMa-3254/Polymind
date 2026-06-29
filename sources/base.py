@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
 import re
+import ssl
 from typing import Any
 from urllib.error import URLError
 from urllib.request import Request, urlopen
@@ -37,10 +38,18 @@ class SourceAdapter:
 def fetch_url(url: str, *, headers: dict[str, str] | None = None, timeout: int = 30) -> bytes:
     request = Request(url, headers=headers or {"User-Agent": "Polymind/0.1"})
     try:
-        with urlopen(request, timeout=timeout) as response:
+        with urlopen(request, timeout=timeout, context=certificate_context()) as response:
             return response.read()
     except URLError as exc:
         raise SourceError(str(exc)) from exc
+
+
+def certificate_context() -> ssl.SSLContext | None:
+    try:
+        import certifi
+    except ImportError:
+        return None
+    return ssl.create_default_context(cafile=certifi.where())
 
 
 def clean_text(value: str | None) -> str:

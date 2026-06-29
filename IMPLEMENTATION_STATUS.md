@@ -4,8 +4,8 @@
 
 The first implementation scaffold is in place. The project now has configuration, source adapter
 foundations, pipeline stubs, SQLite storage, prompt files, a minimal static renderer, setup docs, a
-GitHub Actions workflow scaffold, and offline tests. The live model/API integrations, Voyage embedding
-generation, and verified GitHub Pages deployment are still remaining.
+GitHub Actions workflow scaffold, and offline tests. Anthropic/Voyage client plumbing is in place, but
+live API credentials and GitHub Pages deployment still need to be verified in GitHub.
 
 The local directory has been initialized as a git repository and pushed to the existing GitHub repo
 `LeMa-3254/Polymind`. Workflow execution, commit-back behavior, repository secrets, and GitHub Pages
@@ -36,6 +36,18 @@ deployment settings still need to be verified in GitHub.
 - Added a minimal static renderer for `index.html`, `index.json`, and `feed.xml`.
 - Added prompt files for relevance scoring, enrichment, and weekly synthesis.
 - Added offline unit tests for source parsing/filtering, store behavior, and static rendering.
+- Added Anthropic model-client plumbing for scoring and enrichment, with bootstrap fallback when no key/SDK is available.
+- Added Voyage embedding-client plumbing and connected embedding generation before dedup, with bootstrap skip when no key/SDK is available.
+- Added token usage aggregation for Anthropic scoring, Anthropic enrichment, and Voyage embeddings.
+- Added bounded retry behavior around live Anthropic and Voyage calls.
+- Added offline tests for model JSON parsing, injected model clients, injected embedding clients, and token accounting.
+- Added weekly synthesis generation and SQLite storage, with model-backed and deterministic fallback paths.
+- Added `weekly.html` and a latest weekly synthesis preview on the home page.
+- Extended the GitHub Actions workflow with a Monday weekly-synthesis schedule and manual workflow input.
+- Installed local runtime dependencies in `.venv` and verified the pipeline with a live source-fetch smoke run:
+  312 fetched, 40 included, 0 source errors, and static site output generated in `/private/tmp`.
+- Added certifi-backed HTTPS verification for source fetching.
+- Moved RSC Digital Discovery and ACS journal RSS feeds to `disabled_feeds` after live smoke tests showed TLS/403 failures.
 - Added `.gitignore` for local Python/cache artifacts.
 - Added `README.md` with setup, run, test, and GitHub Pages launch notes.
 - Added `.env.example` documenting local Anthropic and Voyage key names.
@@ -46,17 +58,13 @@ deployment settings still need to be verified in GitHub.
 
 ## Remaining
 
-- Replace bootstrap scoring/enrichment stubs with Anthropic model calls using the configured models and prompts.
+- Run Anthropic scoring/enrichment against live API credentials and tune prompts from real outputs.
 - Verify the GitHub Actions workflow on `workflow_dispatch` after configuring repository secrets.
 - Configure repository secrets and GitHub Pages settings.
-- Verify live arXiv, OpenAlex, Crossref, and journal RSS fetching against real responses.
-- Implement structured JSON parsing and retry/error handling for model responses.
-- Implement Voyage embedding generation and connect it to the tested 30-day deduplication stage.
-- Implement weekly synthesis generation and storage.
-- Expand the static site beyond the minimal renderer: archive page, weekly page, search/filter UI, and polished templates.
-- Extend the GitHub Actions workflow for weekly synthesis once that pipeline stage exists.
+- Revisit disabled RSC/ACS journal RSS feeds or replace them with accessible source URLs.
+- Run Voyage embedding generation against live API credentials and verify duplicate behavior across repeated live runs.
+- Expand the static site beyond the current renderer: archive page, search/filter UI, and polished templates.
 - Add verification tests for adapters, gate behavior, dedup behavior, full local runs, CI dry-runs, and cost caps.
-- Add token usage tracking for Anthropic and Voyage calls.
 
 ## Decisions Locked
 

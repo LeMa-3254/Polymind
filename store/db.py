@@ -74,6 +74,67 @@ def included_items(db: sqlite3.Connection) -> list[sqlite3.Row]:
     )
 
 
+def included_items_between(db: sqlite3.Connection, *, start_date: str, end_date: str) -> list[sqlite3.Row]:
+    return list(
+        db.execute(
+            """
+            SELECT *
+            FROM items
+            WHERE status = 'included'
+              AND COALESCE(published_date, fetched_date) BETWEEN ? AND ?
+            ORDER BY COALESCE(published_date, fetched_date) DESC, title ASC
+            """,
+            (start_date, end_date),
+        )
+    )
+
+
+def upsert_weekly_summary(
+    db: sqlite3.Connection,
+    *,
+    week_start: str,
+    week_end: str,
+    synthesis_md: str,
+    item_ids: list[str],
+) -> None:
+    db.execute(
+        """
+        INSERT INTO weekly_summaries (week_start, week_end, synthesis_md, item_ids, generated_at)
+        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(week_start) DO UPDATE SET
+          week_end = excluded.week_end,
+          synthesis_md = excluded.synthesis_md,
+          item_ids = excluded.item_ids,
+          generated_at = excluded.generated_at
+        """,
+        (week_start, week_end, synthesis_md, json.dumps(item_ids, sort_keys=True)),
+    )
+    db.commit()
+
+
+def latest_weekly_summary(db: sqlite3.Connection) -> sqlite3.Row | None:
+    return db.execute(
+        """
+        SELECT *
+        FROM weekly_summaries
+        ORDER BY week_start DESC
+        LIMIT 1
+        """
+    ).fetchone()
+
+
+def weekly_summaries(db: sqlite3.Connection) -> list[sqlite3.Row]:
+    return list(
+        db.execute(
+            """
+            SELECT *
+            FROM weekly_summaries
+            ORDER BY week_start DESC
+            """
+        )
+    )
+
+
 def recent_embedding_memory(db: sqlite3.Connection, *, window_days: int) -> list[dict[str, Any]]:
     cutoff = (datetime.now(timezone.utc) - timedelta(days=window_days)).date().isoformat()
     rows = db.execute(

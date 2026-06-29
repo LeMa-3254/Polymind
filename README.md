@@ -36,6 +36,7 @@ Equivalent direct commands:
 ```bash
 python3 -m unittest discover -s tests
 python3 pipeline/run.py --config targeting.yaml --db data/tracker.db
+python3 pipeline/run.py --config targeting.yaml --db data/tracker.db --weekly-synthesis
 python3 site/build.py --config targeting.yaml --db data/tracker.db --output public
 ```
 
