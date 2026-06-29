@@ -3,9 +3,9 @@
 ## Current Status
 
 The first implementation scaffold is in place. The project now has configuration, source adapter
-foundations, pipeline stubs, SQLite storage, prompt files, a minimal static renderer, setup docs, a
-GitHub Actions workflow scaffold, and offline tests. Anthropic/Voyage client plumbing is in place, but
-live API credentials and GitHub Pages deployment still need to be verified in GitHub.
+foundations, pipeline stubs, SQLite storage, prompt files, static site pages, setup docs, a GitHub
+Actions workflow scaffold, and offline tests. Anthropic/Voyage client plumbing is in place, but live
+API credentials and GitHub Pages deployment still need to be verified in GitHub.
 
 The local directory has been initialized as a git repository and pushed to the existing GitHub repo
 `LeMa-3254/Polymind`. Workflow execution, commit-back behavior, repository secrets, and GitHub Pages
@@ -43,6 +43,10 @@ deployment settings still need to be verified in GitHub.
 - Added offline tests for model JSON parsing, injected model clients, injected embedding clients, and token accounting.
 - Added weekly synthesis generation and SQLite storage, with model-backed and deterministic fallback paths.
 - Added `weekly.html` and a latest weekly synthesis preview on the home page.
+- Added `archive.html` with generated source/theme filters and client-side search over included items.
+- Added static site tests for archive rendering and generated output files.
+- Added an offline pipeline dry-run test covering ingest, scoring fallback, enrichment fallback, weekly synthesis, SQLite writes, and run logging.
+- Updated the SQLite connection helper so `with connect(...)` blocks close cleanly after commit/rollback.
 - Extended the GitHub Actions workflow with a Monday weekly-synthesis schedule and manual workflow input.
 - Installed local runtime dependencies in `.venv` and verified the pipeline with a live source-fetch smoke run:
   312 fetched, 40 included, 0 source errors, and static site output generated in `/private/tmp`.
@@ -63,8 +67,8 @@ deployment settings still need to be verified in GitHub.
 - Configure repository secrets and GitHub Pages settings.
 - Revisit disabled RSC/ACS journal RSS feeds or replace them with accessible source URLs.
 - Run Voyage embedding generation against live API credentials and verify duplicate behavior across repeated live runs.
-- Expand the static site beyond the current renderer: archive page, search/filter UI, and polished templates.
-- Add verification tests for adapters, gate behavior, dedup behavior, full local runs, CI dry-runs, and cost caps.
+- Polish the static site templates and add more browse paths if the first live archive needs them.
+- Add verification tests for adapters, gate behavior, CI dry-runs, and cost caps.
 
 ## Decisions Locked
 

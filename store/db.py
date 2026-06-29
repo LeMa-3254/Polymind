@@ -11,8 +11,15 @@ from models import Item
 SCHEMA_PATH = Path(__file__).with_name("schema.sql")
 
 
+class ClosingConnection(sqlite3.Connection):
+    def __exit__(self, exc_type, exc_value, traceback) -> bool:
+        result = super().__exit__(exc_type, exc_value, traceback)
+        self.close()
+        return result
+
+
 def connect(path: str | Path) -> sqlite3.Connection:
-    db = sqlite3.connect(path)
+    db = sqlite3.connect(path, factory=ClosingConnection)
     db.row_factory = sqlite3.Row
     return db
 

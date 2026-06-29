@@ -75,6 +75,76 @@ class StoreTests(unittest.TestCase):
         self.assertIn("Machine learning for polymer design", html)
         self.assertIn("https://polymind.github.io/", rss)
 
+    def test_archive_render_includes_filters_and_items(self):
+        config = {
+            "site": {
+                "name": "Polymind",
+                "description": "Daily feed plus weekly synthesis.",
+                "url": "https://polymind.github.io/",
+            }
+        }
+        items = [
+            {
+                "id": "abc123",
+                "title": "Machine learning for polymer design",
+                "url": "https://example.test/paper",
+                "source_name": "Example",
+                "published_date": "2026-06-29",
+                "fetched_date": "2026-06-29",
+                "theme": "property prediction",
+                "summary": "A useful test item.",
+                "abstract": None,
+                "why_it_matters": "It proves rendering works.",
+            }
+        ]
+
+        html = site_build.render_archive(config, items)
+
+        self.assertIn('id="search"', html)
+        self.assertIn('value="Example"', html)
+        self.assertIn('value="property prediction"', html)
+        self.assertIn("Machine learning for polymer design", html)
+
+    def test_archive_json_escapes_script_closing_sequences(self):
+        rendered = site_build.json_for_script([{"title": "</script><p>bad</p>"}])
+
+        self.assertIn("<\\/script>", rendered)
+        self.assertNotIn("</script>", rendered)
+
+    def test_build_site_writes_archive_page(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "tracker.db"
+            config_path = Path(tmpdir) / "targeting.yaml"
+            output_dir = Path(tmpdir) / "public"
+            config_path.write_text(
+                "\n".join(
+                    [
+                        "site:",
+                        "  name: Polymind",
+                        "  description: Daily feed plus weekly synthesis.",
+                        "  url: https://polymind.github.io/",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            item = Item.from_source(
+                title="Machine learning for polymer design",
+                url="https://example.test/paper",
+                source_type="test",
+                source_name="Example",
+                tier="A",
+            )
+            item.status = "included"
+
+            with connect(db_path) as db:
+                init_db(db)
+                upsert_items(db, [item])
+
+            site_build.build_site(config_path=str(config_path), db_path=str(db_path), output_dir=str(output_dir))
+
+            self.assertTrue((output_dir / "archive.html").exists())
+            self.assertTrue((output_dir / "index.json").exists())
+
     def test_weekly_summary_store_and_render(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / "tracker.db"

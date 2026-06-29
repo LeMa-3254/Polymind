@@ -24,6 +24,7 @@ def build_site(config_path: str = "targeting.yaml", db_path: str = "data/tracker
         all_weeklies = weekly_summaries(db)
 
     (output / "index.html").write_text(render_index(config, items, latest_weekly), encoding="utf-8")
+    (output / "archive.html").write_text(render_archive(config, items), encoding="utf-8")
     (output / "weekly.html").write_text(render_weekly(config, all_weeklies), encoding="utf-8")
     (output / "index.json").write_text(
         json.dumps([dict(item) for item in items], indent=2, sort_keys=True),
@@ -60,7 +61,7 @@ def render_index(config: dict, items: list, latest_weekly=None) -> str:
   <header>
     <h1>{escape(site["name"])}</h1>
     <p>{escape(site["description"])}</p>
-    <nav><a href="index.html">Daily feed</a><a href="weekly.html">Weekly synthesis</a><a href="feed.xml">RSS</a></nav>
+    <nav><a href="index.html">Daily feed</a><a href="archive.html">Archive</a><a href="weekly.html">Weekly synthesis</a><a href="feed.xml">RSS</a></nav>
   </header>
   <main>
     {weekly}
@@ -72,6 +73,127 @@ def render_index(config: dict, items: list, latest_weekly=None) -> str:
 </body>
 </html>
 """
+
+
+def render_archive(config: dict, items: list) -> str:
+    site = config["site"]
+    cards = "\n".join(render_card(item) for item in items) or "<p>No included items yet.</p>"
+    sources = option_list(sorted({item["source_name"] for item in items if item["source_name"]}))
+    themes = option_list(sorted({item["theme"] for item in items if item["theme"]}))
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{escape(site["name"])} - archive</title>
+  <style>
+    body {{ font-family: system-ui, sans-serif; margin: 0; color: #202124; background: #f7f8fa; }}
+    header, main {{ max-width: 1080px; margin: 0 auto; padding: 24px; }}
+    header {{ border-bottom: 1px solid #d9dde3; }}
+    h1 {{ margin: 0 0 8px; font-size: 2rem; }}
+    nav a {{ margin-right: 12px; }}
+    .toolbar {{ align-items: end; display: grid; gap: 12px; grid-template-columns: 2fr 1fr 1fr; margin: 24px 0; }}
+    label {{ color: #5f6368; display: grid; font-size: 0.85rem; gap: 6px; }}
+    input, select {{ border: 1px solid #c8ced8; border-radius: 6px; color: #202124; font: inherit; min-height: 40px; padding: 8px 10px; }}
+    article {{ background: white; border: 1px solid #d9dde3; border-radius: 8px; padding: 16px; margin: 16px 0; }}
+    article h2 {{ margin: 0 0 8px; font-size: 1.1rem; }}
+    .meta, #result-count {{ color: #5f6368; font-size: 0.9rem; }}
+    @media (max-width: 760px) {{ .toolbar {{ grid-template-columns: 1fr; }} }}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>{escape(site["name"])} Archive</h1>
+    <p>{escape(site["description"])}</p>
+    <nav><a href="index.html">Daily feed</a><a href="archive.html">Archive</a><a href="weekly.html">Weekly synthesis</a><a href="feed.xml">RSS</a></nav>
+  </header>
+  <main>
+    <section class="toolbar">
+      <label>Search<input id="search" type="search" autocomplete="off"></label>
+      <label>Source<select id="source"><option value="">All sources</option>{sources}</select></label>
+      <label>Theme<select id="theme"><option value="">All themes</option>{themes}</select></label>
+    </section>
+    <p id="result-count">{len(items)} items</p>
+    <section id="items">{cards}</section>
+  </main>
+  <script>
+    const items = {json_for_script([archive_item(item) for item in items])};
+    const search = document.querySelector("#search");
+    const source = document.querySelector("#source");
+    const theme = document.querySelector("#theme");
+    const count = document.querySelector("#result-count");
+    const container = document.querySelector("#items");
+
+    function text(value) {{
+      return value == null ? "" : String(value);
+    }}
+
+    function html(value) {{
+      return text(value).replace(/[&<>"']/g, char => ({{
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }}[char]));
+    }}
+
+    function renderItem(item) {{
+      const date = item.published_date || item.fetched_date || "";
+      const theme = item.theme || "materials AI";
+      const summary = item.summary || item.abstract || "";
+      return `<article>
+  <h2><a href="${{html(item.url)}}">${{html(item.title)}}</a></h2>
+  <p class="meta">${{html(item.source_name)}} · ${{html(date)}} · ${{html(theme)}}</p>
+  <p>${{html(summary)}}</p>
+  <p><strong>Why it matters:</strong> ${{html(item.why_it_matters || "")}}</p>
+</article>`;
+    }}
+
+    function render() {{
+      const query = search.value.trim().toLowerCase();
+      const filtered = items.filter(item => {{
+        const haystack = [item.title, item.summary, item.abstract, item.why_it_matters, item.theme, item.source_name]
+          .map(text)
+          .join(" ")
+          .toLowerCase();
+        return (!query || haystack.includes(query))
+          && (!source.value || item.source_name === source.value)
+          && (!theme.value || item.theme === theme.value);
+      }});
+      count.textContent = `${{filtered.length}} item${{filtered.length === 1 ? "" : "s"}}`;
+      container.innerHTML = filtered.length ? filtered.map(renderItem).join("") : "<p>No matching items.</p>";
+    }}
+
+    search.addEventListener("input", render);
+    source.addEventListener("change", render);
+    theme.addEventListener("change", render);
+  </script>
+</body>
+</html>
+"""
+
+
+def archive_item(item) -> dict:
+    return {
+        "title": item["title"],
+        "url": item["url"],
+        "source_name": item["source_name"],
+        "published_date": item["published_date"],
+        "fetched_date": item["fetched_date"],
+        "theme": item["theme"],
+        "summary": item["summary"],
+        "abstract": item["abstract"],
+        "why_it_matters": item["why_it_matters"],
+    }
+
+
+def option_list(values: list[str]) -> str:
+    return "".join(f'<option value="{escape(value)}">{escape(value)}</option>' for value in values)
+
+
+def json_for_script(value) -> str:
+    return json.dumps(value, sort_keys=True).replace("</", "<\\/")
 
 
 def render_weekly_preview(summary) -> str:
@@ -115,7 +237,7 @@ def render_weekly(config: dict, summaries: list) -> str:
 <body>
   <header>
     <h1>{escape(site["name"])} Weekly Synthesis</h1>
-    <nav><a href="index.html">Daily feed</a><a href="weekly.html">Weekly synthesis</a><a href="feed.xml">RSS</a></nav>
+    <nav><a href="index.html">Daily feed</a><a href="archive.html">Archive</a><a href="weekly.html">Weekly synthesis</a><a href="feed.xml">RSS</a></nav>
   </header>
   <main>{entries}</main>
 </body>

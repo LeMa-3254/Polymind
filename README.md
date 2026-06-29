@@ -7,8 +7,8 @@ SQLite, and publishes a static GitHub Pages site.
 ## Current State
 
 The repository scaffold is in place, with source adapters, a runnable pipeline shape, SQLite storage,
-prompt files, static rendering, dedup behavior for stored embeddings, and offline tests. The Anthropic
-model integrations and Voyage embedding generation are still bootstrap stubs; see
+prompt files, static rendering, archive/search UI, dedup behavior for stored embeddings, model-client
+plumbing, and offline tests. Live Anthropic/Voyage runs still need API credentials; see
 `IMPLEMENTATION_STATUS.md` for the live tracker.
 
 ## Setup
