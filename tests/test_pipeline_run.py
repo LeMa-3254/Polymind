@@ -77,6 +77,49 @@ class PipelineRunTests(unittest.TestCase):
         self.assertEqual(run_count, 1)
         self.assertEqual(weekly_count, 1)
 
+    def test_rescore_archive_drops_items_failing_current_gate(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            config_path = root / "targeting.yaml"
+            db_path = root / "tracker.db"
+            config_path.write_text(
+                "\n".join(
+                    [
+                        "site: {name: Polymind, description: d, url: https://x/}",
+                        "targeting:",
+                        "  ai_terms: [machine learning]",
+                        "  materials_terms: [polymer]",
+                        "  exclude_terms: []",
+                        "  polymer_boost_terms: [polymer]",
+                        "scoring: {min_score: 3}",
+                        "synth: {}",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            from store.db import init_db, upsert_items
+
+            polymer = Item.from_source(
+                title="Machine learning for polymer design", url="https://x/p", source_type="t",
+                source_name="E", tier="A", abstract="polymer property prediction",
+            )
+            polymer.status = "included"
+            offtopic = Item.from_source(
+                title="Machine learning for steel welding", url="https://x/s", source_type="t",
+                source_name="E", tier="A", abstract="stainless steel weld optimization",
+            )
+            offtopic.status = "included"
+            with connect(db_path) as db:
+                init_db(db)
+                upsert_items(db, [polymer, offtopic])
+
+            pipeline_run.rescore_archive(config_path=str(config_path), db_path=str(db_path), weekly_synthesis=False)
+
+            with connect(db_path) as db:
+                statuses = dict(db.execute("SELECT title, status FROM items"))
+            self.assertEqual(statuses["Machine learning for polymer design"], "included")
+            self.assertEqual(statuses["Machine learning for steel welding"], "dropped_lowscore")
+
 
 if __name__ == "__main__":
     unittest.main()

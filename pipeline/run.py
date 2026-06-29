@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 import sys
 
@@ -9,6 +10,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from config import load_config
+from models import Item
 from pipeline.dedup import deduplicate_items
 from pipeline.embeddings import embed_items
 from pipeline.enrich import enrich_items
@@ -75,12 +77,80 @@ def run_pipeline(
     return 0
 
 
+def item_from_row(row) -> Item:
+    return Item(
+        id=row["id"],
+        title=row["title"],
+        url=row["url"],
+        source_type=row["source_type"],
+        source_name=row["source_name"],
+        tier=row["tier"],
+        authors=json.loads(row["authors"]) if row["authors"] else [],
+        published_date=row["published_date"],
+        fetched_date=row["fetched_date"],
+        abstract=row["abstract"],
+        doi=row["doi"],
+        embedding=json.loads(row["embedding"]) if row["embedding"] else None,
+        relevance_score=row["relevance_score"],
+        quality_score=row["quality_score"],
+        score_reason=row["score_reason"],
+        theme=row["theme"],
+        summary=row["summary"],
+        why_it_matters=row["why_it_matters"],
+        digest_date=row["digest_date"],
+        status=row["status"],
+        dup_of=row["dup_of"],
+    )
+
+
+def rescore_archive(
+    config_path: str = "targeting.yaml",
+    db_path: str = "data/tracker.db",
+    *,
+    weekly_synthesis: bool = True,
+) -> int:
+    """One-time maintenance: re-score every stored item against the current rubric.
+
+    Drops items that no longer pass and reassigns the theme, so a targeting change applies
+    to the whole archive (not just newly fetched items). Preserves existing summaries,
+    why-it-matters text, and embeddings."""
+    config = load_config(config_path)
+    token_usage: dict = {}
+    with connect(db_path) as db:
+        init_db(db)
+        rows = list(db.execute("SELECT * FROM items"))
+        before = sum(1 for row in rows if row["status"] == "included")
+        rescored = [score_item(item_from_row(row), config, token_usage=token_usage) for row in rows]
+        upsert_items(db, rescored)
+        after = sum(1 for item in rescored if item.status == "included")
+        if weekly_synthesis:
+            week_start, week_end = last_complete_week_bounds()
+            weekly_items = included_items_between(db, start_date=week_start, end_date=week_end)
+            synthesis_md = synthesize_week(weekly_items, config, token_usage=token_usage)
+            upsert_weekly_summary(
+                db,
+                week_start=week_start,
+                week_end=week_end,
+                synthesis_md=synthesis_md,
+                item_ids=[item["id"] for item in weekly_items],
+            )
+        log_run(
+            db,
+            counts={"rescored": len(rows), "included_before": before, "included_after": after},
+            token_usage=token_usage,
+        )
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the Polymind tracker pipeline")
     parser.add_argument("--config", default="targeting.yaml")
     parser.add_argument("--db", default="data/tracker.db")
     parser.add_argument("--weekly-synthesis", action="store_true")
+    parser.add_argument("--rescore-all", action="store_true", help="Re-score the whole archive against the current rubric")
     args = parser.parse_args()
+    if args.rescore_all:
+        return rescore_archive(config_path=args.config, db_path=args.db)
     return run_pipeline(config_path=args.config, db_path=args.db, weekly_synthesis=args.weekly_synthesis)
 
 

@@ -8,6 +8,11 @@ on:
         required: false
         default: true
         type: boolean
+      rescore_all:
+        description: "Re-score the whole archive against the current rubric (one-time maintenance)"
+        required: false
+        default: false
+        type: boolean
   schedule:
     - cron: "37 14 * * 1"   # Mondays 14:37 UTC — one weekly run, with synthesis
 
@@ -48,7 +53,9 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.weekly_synthesis }}" = "true" ]; then
+          if [ "${{ inputs.rescore_all }}" = "true" ]; then
+            python pipeline/run.py --config targeting.yaml --db data/tracker.db --rescore-all
+          elif [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.weekly_synthesis }}" = "true" ]; then
             python pipeline/run.py --config targeting.yaml --db data/tracker.db --weekly-synthesis
           else
             python pipeline/run.py --config targeting.yaml --db data/tracker.db
