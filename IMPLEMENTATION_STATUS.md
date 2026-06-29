@@ -2,14 +2,16 @@
 
 ## Current Status
 
-The first implementation scaffold is in place. The project now has configuration, source adapter
-foundations, pipeline stubs, SQLite storage, prompt files, static site pages, setup docs, a GitHub
-Actions workflow scaffold, and offline tests. Anthropic/Voyage client plumbing is in place, but live
-API credentials and GitHub Pages deployment still need to be verified in GitHub.
+The MVP implementation is running end to end. The project now has configuration, source adapters,
+model-client plumbing, Voyage embedding plumbing, SQLite storage, prompt files, static site pages,
+setup docs, GitHub Actions automation, and offline tests. The repository has had a first manual
+workflow run, produced a committed tracker database, and exposed live-site data-quality issues that
+have been fixed in code and in the committed SQLite archive.
 
-The local directory has been initialized as a git repository and pushed to the existing GitHub repo
-`LeMa-3254/Polymind`. Workflow execution, commit-back behavior, repository secrets, and GitHub Pages
-deployment settings still need to be verified in GitHub.
+The local directory is initialized as a git repository and pushed to `LeMa-3254/Polymind`. The repo
+was made public so GitHub Pages can run on the current GitHub plan. Repository API secrets were added
+by the user. The next operational check is to rerun the GitHub Actions workflow after the latest data
+quality fixes and confirm the deployed Pages site reflects the corrected dates and fallback text.
 
 ## Completed
 
@@ -58,6 +60,9 @@ deployment settings still need to be verified in GitHub.
 - Added `Makefile` targets for tests, pipeline runs, static site builds, and cleanup.
 - Added initial `.github/workflows/daily.yml` for tests, daily pipeline runs, site build, Pages deploy,
   and SQLite commit-back.
+- Made the GitHub repository public so GitHub Pages can be enabled without upgrading the GitHub plan.
+- Added Anthropic and Voyage API keys as GitHub Actions repository secrets.
+- Completed a first manual GitHub Actions run that produced and committed `data/tracker.db`.
 - Updated GitHub Actions pins to current Node 24-compatible action major versions after the first manual
   run reported a Node 20 deprecation warning.
 - Fixed first live-site data quality issues: future issue publication dates now fall back to real
@@ -67,9 +72,8 @@ deployment settings still need to be verified in GitHub.
 
 ## Remaining
 
-- Run Anthropic scoring/enrichment against live API credentials and tune prompts from real outputs.
-- Verify the GitHub Actions workflow on `workflow_dispatch` after configuring repository secrets.
-- Configure repository secrets and GitHub Pages settings.
+- Rerun the GitHub Actions workflow after the latest data-quality fixes and confirm the Pages deployment updates.
+- Review live Anthropic scoring/enrichment outputs and tune prompts/thresholds for precision.
 - Revisit disabled RSC/ACS journal RSS feeds or replace them with accessible source URLs.
 - Run Voyage embedding generation against live API credentials and verify duplicate behavior across repeated live runs.
 - Polish the static site templates and add more browse paths if the first live archive needs them.
