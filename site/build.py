@@ -17,110 +17,179 @@ from store.db import connect, included_items, latest_weekly_summary, weekly_summ
 
 
 # ---------------------------------------------------------------------------
-# Shared design system — one stylesheet for every page (light, calm, scannable)
+# Identity: "polymer research radar / lab-instrument readout".
+# Cool paper + navy ink + one coral signal accent. Space Grotesk / Inter / IBM Plex Mono.
+# Signature: the polymer repeat-unit bracket [ … ]n, and a 5-bar relevance signal meter.
 # ---------------------------------------------------------------------------
+FONTS = (
+    '<link rel="preconnect" href="https://fonts.googleapis.com">'
+    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
+    '<link href="https://fonts.googleapis.com/css2?'
+    "family=IBM+Plex+Mono:wght@400;500;600&"
+    "family=Inter:wght@400;450;500;600;700&"
+    'family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">'
+)
+
 SITE_CSS = """
 :root{
-  --bg:#fafafa;--surface:#fff;--ink:#16181d;--muted:#6b7280;--faint:#9aa1ac;
-  --line:#ececf0;--accent:#ea580c;--accent-soft:#fff4ed;--accent-ink:#c2410c;
-  --radius:14px;--maxw:880px;
+  --paper:#f4f5f7;--surface:#ffffff;--ink:#14171f;--ink-soft:#434a59;--muted:#717885;
+  --faint:#9aa0ac;--line:#e7e9ef;--line-strong:#d7dae2;--navy:#1a2440;
+  --signal:#ee4b2b;--signal-soft:#fceae5;--signal-ink:#be3a1f;
+  --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --display:"Space Grotesk",var(--sans);--mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --maxw:920px;--radius:16px;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  color:var(--ink);background:var(--bg);line-height:1.55;font-size:16px;-webkit-font-smoothing:antialiased}
+body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--paper);
+  font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;font-feature-settings:"cv05","ss01"}
 a{color:inherit;text-decoration:none}
-.wrap{max-width:var(--maxw);margin:0 auto;padding:0 20px}
-.site-header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.85);
-  backdrop-filter:saturate(180%) blur(10px);-webkit-backdrop-filter:saturate(180%) blur(10px);
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
+.mono{font-family:var(--mono)}
+
+/* header */
+.site-header{position:sticky;top:0;z-index:30;background:rgba(244,245,247,.82);
+  backdrop-filter:saturate(180%) blur(12px);-webkit-backdrop-filter:saturate(180%) blur(12px);
   border-bottom:1px solid var(--line)}
-.header-inner{display:flex;align-items:center;justify-content:space-between;height:60px;gap:16px}
-.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.15rem;letter-spacing:-.01em}
-.brand-mark{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;
-  background:var(--accent);color:#fff;font-weight:800;font-size:.95rem}
-.nav{display:flex;gap:4px;align-items:center}
-.nav a{padding:7px 12px;border-radius:999px;font-size:.9rem;color:var(--muted);font-weight:500}
-.nav a:hover{color:var(--ink);background:#f1f1f4}
-.nav a.active{color:var(--accent-ink);background:var(--accent-soft)}
-.nav a.rss{color:var(--faint)}
-.hero{padding:36px 0 6px}
-.hero h1{margin:0 0 8px;font-size:1.9rem;line-height:1.15;letter-spacing:-.025em}
-.lede{margin:0;color:var(--muted);font-size:1.02rem;max-width:62ch}
-.hero-stat{margin:14px 0 0;color:var(--faint);font-size:.84rem;font-weight:500}
-.page-head{padding:30px 0 2px}
-.page-head h1{margin:0;font-size:1.55rem;letter-spacing:-.02em}
-.page-head p{margin:7px 0 0;color:var(--muted)}
-.feed{padding:6px 0 40px}
-.date-group{margin-top:26px}
-.date-label{display:flex;align-items:center;gap:12px;font-size:.8rem;font-weight:600;
-  text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin:0 0 12px}
-.date-label::after{content:"";flex:1;height:1px;background:var(--line)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;height:62px;gap:18px}
+.brand{display:flex;align-items:baseline;gap:2px;font-family:var(--display);font-weight:700;
+  font-size:1.24rem;letter-spacing:-.02em;color:var(--ink)}
+.brand .br{font-family:var(--mono);font-weight:600;color:var(--signal)}
+.brand sub{font-family:var(--mono);font-size:.62em;color:var(--signal);font-weight:600}
+.nav{display:flex;gap:2px;align-items:center}
+.nav a{padding:8px 13px;border-radius:9px;font-size:.86rem;font-weight:500;color:var(--muted)}
+.nav a:hover{color:var(--ink);background:#eceef2}
+.nav a.active{color:var(--ink);background:#e6e8ef}
+
+/* eyebrow / labels */
+.eyebrow{font-family:var(--mono);font-size:.72rem;font-weight:500;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:8px}
+.eyebrow .br{color:var(--signal)}
+
+/* hero */
+.hero{padding:44px 0 14px}
+.hero h1{font-family:var(--display);font-weight:600;font-size:2.5rem;line-height:1.06;
+  letter-spacing:-.03em;margin:16px 0 0;max-width:18ch}
+.hero h1 em{font-style:normal;color:var(--signal)}
+.hero .lede{margin:14px 0 0;color:var(--ink-soft);font-size:1.05rem;max-width:54ch}
+.statline{display:flex;flex-wrap:wrap;gap:0;margin:26px 0 0;border:1px solid var(--line);
+  border-radius:12px;background:var(--surface);overflow:hidden}
+.stat{padding:13px 18px;border-right:1px solid var(--line);min-width:120px}
+.stat:last-child{border-right:0}
+.stat b{font-family:var(--display);font-size:1.35rem;font-weight:600;display:block;letter-spacing:-.02em}
+.stat span{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+/* category tabs */
+.tabs{display:flex;flex-wrap:wrap;gap:7px;padding:26px 0 4px;position:sticky;top:62px;z-index:10;
+  background:linear-gradient(var(--paper) 72%,transparent)}
+.tab{font:inherit;font-size:.84rem;font-weight:500;cursor:pointer;color:var(--ink-soft);
+  background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 13px;
+  display:inline-flex;align-items:center;gap:7px;transition:border-color .12s,color .12s,background .12s}
+.tab:hover{border-color:var(--line-strong)}
+.tab .tab-n{font-family:var(--mono);font-size:.7rem;color:var(--faint)}
+.tab.is-active{background:var(--navy);border-color:var(--navy);color:#fff}
+.tab.is-active .tab-n{color:#aab2c8}
+
+/* feed + cards */
+.feed{padding:14px 0 48px}
+.section-label{font-family:var(--mono);font-size:.74rem;font-weight:500;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:10px;margin:24px 0 12px}
+.section-label .br{color:var(--signal);font-weight:600}
+.section-label::after{content:"";flex:1;height:1px;background:var(--line)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
-  padding:18px 20px;margin:12px 0;transition:border-color .15s ease,box-shadow .15s ease}
-.card:hover{border-color:#dcdce2;box-shadow:0 8px 26px -14px rgba(20,24,40,.22)}
-.card-head{display:flex;gap:12px;justify-content:space-between;align-items:flex-start}
-.card-title{margin:0;font-size:1.08rem;font-weight:650;line-height:1.36;letter-spacing:-.01em}
-.card-title a:hover{color:var(--accent-ink)}
-.heat{flex:none;display:inline-flex;align-items:center;gap:5px;font-size:.78rem;font-weight:700;
-  padding:3px 9px;border-radius:999px;white-space:nowrap}
-.heat::before{content:"";width:6px;height:6px;border-radius:50%}
-.heat-high{background:var(--accent-soft);color:var(--accent-ink)}
-.heat-high::before{background:var(--accent)}
-.heat-med{background:#fff7e6;color:#b45309}
-.heat-med::before{background:#f59e0b}
-.heat-low{background:#f1f3f5;color:#6b7280}
-.heat-low::before{background:#9aa1ac}
-.card-meta{margin:7px 0 0;display:flex;flex-wrap:wrap;align-items:center;gap:7px;
-  color:var(--muted);font-size:.86rem}
-.card-meta .src{font-weight:600;color:#374151}
-.dot{color:var(--faint)}
-.summary{margin:10px 0 0;color:#3f4651;font-size:.95rem;
+  padding:20px 22px;margin:11px 0;transition:border-color .14s ease,box-shadow .14s ease,transform .14s ease}
+.card:hover{border-color:var(--line-strong);box-shadow:0 10px 30px -16px rgba(20,30,60,.28);transform:translateY(-1px)}
+.card-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:11px}
+.chip{font-family:var(--mono);font-size:.7rem;font-weight:500;letter-spacing:.04em;color:var(--navy);
+  background:#eef0f6;border-radius:7px;padding:4px 9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
+.card-title{font-size:1.07rem;font-weight:600;line-height:1.34;letter-spacing:-.012em;margin:0;
   display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.why{margin:12px 0 0;padding:9px 13px;background:#fafbfc;border-left:3px solid var(--accent);
-  border-radius:0 8px 8px 0;font-size:.88rem;color:#3f4651}
-.why b{color:var(--accent-ink);font-weight:650}
-.card-foot{margin-top:12px}
-.tag{display:inline-block;max-width:100%;font-size:.78rem;color:var(--muted);background:#f4f4f6;
-  border-radius:7px;padding:3px 9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
-.toolbar{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;margin:20px 0 6px}
-.toolbar label{display:grid;gap:6px;font-size:.74rem;font-weight:600;color:var(--muted);
-  text-transform:uppercase;letter-spacing:.05em}
-.toolbar input,.toolbar select{appearance:none;-webkit-appearance:none;border:1px solid var(--line);
-  background:var(--surface);border-radius:10px;padding:10px 12px;font:inherit;font-size:.92rem;
-  color:var(--ink);min-height:42px;min-width:0;width:100%}
-.toolbar input:focus,.toolbar select:focus{outline:none;border-color:var(--accent);
-  box-shadow:0 0 0 3px var(--accent-soft)}
-.result-count{margin:16px 0 0;color:var(--faint);font-size:.85rem}
-.prose h2{font-size:1.15rem;margin:20px 0 8px;letter-spacing:-.01em}
+.card-title a:hover{color:var(--signal-ink)}
+.card-meta{font-family:var(--mono);font-size:.74rem;color:var(--muted);margin:9px 0 0;
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.card-meta .src{color:var(--ink-soft);font-weight:500}
+.card-meta .sep{color:var(--line-strong)}
+.summary{margin:11px 0 0;color:var(--ink-soft);font-size:.95rem;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.why{margin:13px 0 0;padding:10px 14px;background:#fbfbfc;border:1px solid var(--line);
+  border-left:3px solid var(--signal);border-radius:0 10px 10px 0;font-size:.875rem;color:var(--ink-soft)}
+.why b{font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--signal-ink);font-weight:600;display:block;margin-bottom:3px}
+
+/* relevance signal meter */
+.signal{display:inline-flex;align-items:flex-end;gap:3px;height:15px;flex:none}
+.signal i{width:4px;border-radius:1.5px;background:var(--line-strong);display:block}
+.signal i:nth-child(1){height:6px}.signal i:nth-child(2){height:8.5px}.signal i:nth-child(3){height:11px}
+.signal i:nth-child(4){height:13px}.signal i:nth-child(5){height:15px}
+.signal i.on{background:var(--signal)}
+
+/* empty */
+.empty{padding:44px 0;text-align:center;color:var(--faint);font-family:var(--mono);font-size:.85rem}
+
+/* page head (archive/weekly) */
+.page-head{padding:40px 0 2px}
+.page-head h1{font-family:var(--display);font-weight:600;font-size:1.85rem;letter-spacing:-.025em;margin:12px 0 0}
+.page-head p{margin:9px 0 0;color:var(--ink-soft)}
+
+/* toolbar */
+.toolbar{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;margin:22px 0 4px}
+.toolbar label{display:grid;gap:7px;font-family:var(--mono);font-size:.68rem;font-weight:500;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.toolbar input,.toolbar select{appearance:none;-webkit-appearance:none;font:inherit;font-size:.92rem;
+  color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:11px;
+  padding:11px 13px;min-height:44px;min-width:0;width:100%}
+.toolbar input:focus,.toolbar select:focus{outline:none;border-color:var(--signal);box-shadow:0 0 0 3px var(--signal-soft)}
+.result-count{font-family:var(--mono);font-size:.74rem;letter-spacing:.06em;color:var(--muted);margin:18px 0 0}
+
+/* weekly prose */
+.prose h2{font-family:var(--display);font-size:1.2rem;font-weight:600;letter-spacing:-.01em;margin:22px 0 8px}
 .prose h2:first-child{margin-top:0}
-.prose h3{font-size:.95rem;margin:16px 0 4px;color:#374151}
-.prose p{margin:7px 0;color:#3f4651;font-size:.96rem}
-.prose ul{margin:7px 0;padding-left:20px;color:#3f4651;font-size:.96rem}
-.prose li{margin:5px 0;line-height:1.5}
-.prose a{color:var(--accent-ink);font-weight:550;border-bottom:1px solid #f1c9af}
-.prose a:hover{border-bottom-color:var(--accent)}
-.prose-clip{max-height:200px;overflow:hidden;position:relative;
-  -webkit-mask-image:linear-gradient(#000 62%,transparent);mask-image:linear-gradient(#000 62%,transparent)}
-.weekly-meta{color:var(--faint);font-size:.85rem;margin:0 0 6px}
-.weekly-link{display:inline-block;margin-top:10px;color:var(--accent-ink);font-weight:600;font-size:.9rem}
-.empty{padding:48px 0;text-align:center;color:var(--faint)}
-.site-footer{border-top:1px solid var(--line);margin-top:30px}
+.prose h3{font-family:var(--mono);font-size:.78rem;font-weight:500;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);margin:18px 0 6px}
+.prose p{margin:8px 0;color:var(--ink-soft);font-size:.96rem}
+.prose ul{margin:8px 0;padding-left:0;list-style:none}
+.prose li{margin:9px 0;padding-left:20px;position:relative;color:var(--ink-soft);font-size:.96rem;line-height:1.5}
+.prose li::before{content:"]";font-family:var(--mono);color:var(--signal);position:absolute;left:2px;font-size:.85rem}
+.prose a{color:var(--signal-ink);font-weight:500;border-bottom:1px solid #f3c9bd}
+.prose a:hover{border-bottom-color:var(--signal)}
+.prose-clip{max-height:208px;overflow:hidden;position:relative;
+  -webkit-mask-image:linear-gradient(#000 60%,transparent);mask-image:linear-gradient(#000 60%,transparent)}
+.weekly-meta{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;color:var(--faint);margin:0 0 8px}
+.weekly-link{display:inline-block;margin-top:12px;font-family:var(--mono);font-size:.78rem;
+  letter-spacing:.04em;color:var(--signal-ink);font-weight:500}
+
+/* footer */
+.site-footer{border-top:1px solid var(--line);margin-top:34px;background:var(--surface)}
 .footer-inner{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:center;
-  padding:22px 0;color:var(--faint);font-size:.85rem}
+  padding:24px 22px;color:var(--faint);font-family:var(--mono);font-size:.74rem;letter-spacing:.04em;
+  max-width:var(--maxw);margin:0 auto}
 .footer-inner a{color:var(--muted)}
-.footer-inner a:hover{color:var(--accent-ink)}
+.footer-inner a:hover{color:var(--signal-ink)}
+
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{
+  outline:2px solid var(--signal);outline-offset:2px;border-radius:6px}
 @media (max-width:680px){
   .toolbar{grid-template-columns:1fr}
-  .hero h1{font-size:1.55rem}
-  .nav a{padding:6px 9px}
+  .hero h1{font-size:1.95rem}
+  .stat{flex:1 1 40%}
 }
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
 """
 
 NAV = [("index.html", "Feed"), ("archive.html", "Archive"), ("weekly.html", "Weekly")]
 
-# Home feed is curated and ranked: polymer/soft-matter first, then broader materials AI.
-POLYMER_FEED_LIMIT = 12
-OTHER_FEED_LIMIT = 18
+CANONICAL_THEMES = [
+    "Property Prediction",
+    "Generative & Inverse Design",
+    "Characterization",
+    "Processing Optimization",
+    "Recycling & Sustainability",
+    "LLMs in Materials Science",
+    "Informatics Platforms & Databases",
+]
+
+# Home feed: ranked (relevance, then quality), polymer/soft-matter first, capped.
+INDEX_LIMIT = 48
 
 
 def build_site(config_path: str = "targeting.yaml", db_path: str = "data/tracker.db", output_dir: str = "public") -> None:
@@ -154,6 +223,7 @@ def document(site: dict, *, page_title: str, active: str, main_html: str, body_s
   <title>{escape(page_title)}</title>
   <meta name="description" content="{escape(site.get("description", ""))}">
   <link rel="alternate" type="application/rss+xml" title="{escape(site.get("name", ""))} RSS" href="feed.xml">
+  {FONTS}
   <style>{SITE_CSS}</style>
 </head>
 <body>
@@ -167,124 +237,123 @@ def document(site: dict, *, page_title: str, active: str, main_html: str, body_s
 
 
 def header_html(site: dict, active: str) -> str:
-    name = site.get("name", "Polymind")
-    mark = escape(name[:1].upper() or "P")
+    name = escape(site.get("name", "Polymind"))
     links = "".join(
-        f'<a href="{href}" class="{nav_class(href, active)}">{escape(label)}</a>' if nav_class(href, active)
-        else f'<a href="{href}">{escape(label)}</a>'
+        f'<a href="{href}"{" class=" + chr(34) + "active" + chr(34) if href == active else ""}>{escape(label)}</a>'
         for href, label in NAV
     )
     return f"""<header class="site-header">
   <div class="wrap header-inner">
-    <a class="brand" href="index.html"><span class="brand-mark">{mark}</span>{escape(name)}</a>
+    <a class="brand" href="index.html"><span class="br">[</span>{name}<span class="br">]</span><sub>n</sub></a>
     <nav class="nav">{links}</nav>
   </div>
 </header>"""
 
 
-def nav_class(href: str, active: str) -> str:
-    if href == "feed.xml":
-        return "rss"
-    return "active" if href == active else ""
-
-
 def footer_html(site: dict) -> str:
     name = escape(site.get("name", "Polymind"))
     return f"""<footer class="site-footer">
-  <div class="wrap footer-inner">
-    <span>{name} — AI for polymer &amp; materials development</span>
-    <span><a href="archive.html">Archive</a> &nbsp;·&nbsp; <a href="weekly.html">Weekly</a> &nbsp;·&nbsp; <a href="feed.xml">RSS</a></span>
+  <div class="footer-inner">
+    <span>{name} · AI × polymer research radar</span>
+    <span><a href="archive.html">Archive</a> &nbsp;/&nbsp; <a href="weekly.html">Weekly</a> &nbsp;/&nbsp; <a href="feed.xml">RSS</a></span>
   </div>
 </footer>"""
 
 
 # ---------------------------------------------------------------------------
-# Index (curated feed, ranked by score, polymer/soft-matter first)
+# Index — ranked feed with category tab filtering
 # ---------------------------------------------------------------------------
 def render_index(config: dict, items: list, latest_weekly=None) -> str:
     site = config["site"]
     tagline = site.get("tagline") or site.get("description", "")
-    stat = f"{len(items)} development{'s' if len(items) != 1 else ''} tracked" if items else ""
-    hero = f"""<section class="hero">
-    <h1>{escape(site.get("name", "Polymind"))}</h1>
-    <p class="lede">{escape(tagline)}</p>
-    {f'<p class="hero-stat">{escape(stat)}</p>' if stat else ''}
-  </section>"""
 
     terms = polymer_terms(config)
-    ranked = sorted(items, key=rank_key)  # stable sort keeps recency order within equal scores
-    polymer = [item for item in ranked if is_polymer(item, terms)][:POLYMER_FEED_LIMIT]
-    others = [item for item in ranked if not is_polymer(item, terms)][:OTHER_FEED_LIMIT]
-    shown = len(polymer) + len(others)
+    ranked = sorted(items, key=lambda it: (0 if is_polymer(it, terms) else 1, *rank_key(it)))
+    feed_items = ranked[:INDEX_LIMIT]
 
-    feed = []
-    if polymer:
-        feed.append(render_section("Polymer & soft matter", polymer))
-    if others:
-        label = "More in materials AI" if polymer else "Top developments"
-        feed.append(render_section(label, others))
-    feed_html = "\n".join(feed) or '<p class="empty">No included items yet.</p>'
+    # category counts for the tab bar
+    counts: dict[str, int] = {}
+    for item in feed_items:
+        counts[canonical_theme(field(item, "theme"))] = counts.get(canonical_theme(field(item, "theme")), 0) + 1
+    tabs = [f'<button class="tab is-active" data-filter="all">All <span class="tab-n">{len(feed_items)}</span></button>']
+    for theme in CANONICAL_THEMES + (["Other"] if counts.get("Other") else []):
+        if counts.get(theme):
+            tabs.append(f'<button class="tab" data-filter="{escape(theme)}">{escape(theme)} <span class="tab-n">{counts[theme]}</span></button>')
+    tabs_html = "".join(tabs)
+
+    cards = "\n".join(render_card(item) for item in feed_items) or '<p class="empty">No included items yet.</p>'
+    latest_date = relative_date(field(feed_items[0], "published_date") or field(feed_items[0], "fetched_date")) if feed_items else "—"
+
+    hero = f"""<section class="hero">
+    <p class="eyebrow"><span class="br">[</span> AI &times; polymer research radar <span class="br">]</span></p>
+    <h1>The week's <em>signal</em> in AI&nbsp;for&nbsp;polymers.</h1>
+    <p class="lede">{escape(tagline)}</p>
+    <div class="statline">
+      <div class="stat"><b>{len(items)}</b><span>tracked</span></div>
+      <div class="stat"><b>{len([t for t in counts if t != 'Other'])}</b><span>categories</span></div>
+      <div class="stat"><b>{escape(latest_date)}</b><span>latest</span></div>
+    </div>
+  </section>"""
+
     more = ""
-    if len(items) > shown:
-        more = f'<p style="text-align:center;margin:24px 0 0"><a class="weekly-link" href="archive.html">Browse all {len(items)} developments in the archive →</a></p>'
+    if len(items) > len(feed_items):
+        more = f'<p style="text-align:center;margin:26px 0 0"><a class="weekly-link" href="archive.html">Browse all {len(items)} developments in the archive &rarr;</a></p>'
 
     main = f"""<main class="wrap">
   {hero}
   {render_weekly_preview(latest_weekly)}
-  <section class="feed">{feed_html}{more}</section>
+  <div class="tabs" role="tablist">{tabs_html}</div>
+  <section class="feed" id="feed">{cards}{more}</section>
+  <p class="empty" id="no-match" hidden>No developments in this category yet.</p>
 </main>"""
-    return document(site, page_title=f'{site.get("name", "Polymind")} — AI polymer materials tracker', active="index.html", main_html=main)
 
+    script = """<script>
+    const tabs = document.querySelectorAll('.tab');
+    const cards = document.querySelectorAll('#feed .card');
+    const noMatch = document.querySelector('#no-match');
+    tabs.forEach(tab => tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('is-active'));
+      tab.classList.add('is-active');
+      const filter = tab.dataset.filter;
+      let shown = 0;
+      cards.forEach(card => {
+        const match = filter === 'all' || card.dataset.theme === filter;
+        card.hidden = !match;
+        if (match) shown++;
+      });
+      if (noMatch) noMatch.hidden = shown !== 0;
+    }));
+  </script>"""
 
-def render_section(label: str, items: list) -> str:
-    cards = "\n".join(render_card(item) for item in items)
-    return f'<section class="date-group"><h2 class="date-label">{escape(label)}</h2>{cards}</section>'
-
-
-def polymer_terms(config: dict) -> list[str]:
-    targeting = config.get("targeting", {}) if isinstance(config, dict) else {}
-    return [str(term).lower() for term in targeting.get("polymer_boost_terms", [])]
-
-
-def is_polymer(item, terms: list[str]) -> bool:
-    if not terms:
-        return False
-    haystack = " ".join(str(field(item, key) or "") for key in ("title", "summary", "abstract", "theme")).lower()
-    return any(term in haystack for term in terms)
-
-
-def rank_key(item) -> tuple[float, float]:
-    return (-_num(field(item, "relevance_score")), -_num(field(item, "quality_score")))
-
-
-def _num(value) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return 0.0
+    return document(site, page_title=f'{site.get("name", "Polymind")} — AI for polymers', active="index.html", main_html=main, body_script=script)
 
 
 # ---------------------------------------------------------------------------
-# Archive (client-side search + filters)
+# Archive — search + filters
 # ---------------------------------------------------------------------------
 def render_archive(config: dict, items: list) -> str:
     site = config["site"]
     sources = option_list(sorted({item["source_name"] for item in items if field(item, "source_name")}))
-    themes = option_list(sorted({item["theme"] for item in items if field(item, "theme")}), labeler=format_theme)
+    present = {canonical_theme(field(item, "theme")) for item in items}
+    theme_values = [t for t in CANONICAL_THEMES if t in present] + (["Other"] if "Other" in present else [])
+    themes = "".join(f'<option value="{escape(t)}">{escape(t)}</option>' for t in theme_values)
     cards = "\n".join(render_card(item) for item in items) or '<p class="empty">No included items yet.</p>'
+
     main = f"""<main class="wrap">
   <section class="page-head">
+    <p class="eyebrow"><span class="br">[</span> full archive <span class="br">]</span></p>
     <h1>Archive</h1>
     <p>Search and filter every tracked development.</p>
   </section>
   <section class="toolbar">
     <label>Search<input id="search" type="search" autocomplete="off" placeholder="Keyword, author, method…"></label>
     <label>Source<select id="source"><option value="">All sources</option>{sources}</select></label>
-    <label>Theme<select id="theme"><option value="">All themes</option>{themes}</select></label>
+    <label>Category<select id="theme"><option value="">All categories</option>{themes}</select></label>
   </section>
   <p id="result-count" class="result-count">{len(items)} items</p>
   <section id="items" class="feed">{cards}</section>
 </main>"""
+
     script = f"""<script>
     const items = {json_for_script([archive_item(item) for item in items])};
     const search = document.querySelector("#search");
@@ -293,72 +362,57 @@ def render_archive(config: dict, items: list) -> str:
     const count = document.querySelector("#result-count");
     const container = document.querySelector("#items");
 
-    function text(value) {{ return value == null ? "" : String(value); }}
-    function html(value) {{
-      return text(value).replace(/[&<>"']/g, char => ({{
-        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-      }}[char]));
+    function text(v){{ return v == null ? "" : String(v); }}
+    function esc(v){{ return text(v).replace(/[&<>"']/g, c => ({{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}}[c])); }}
+    function meter(n){{
+      let bars = "";
+      for (let i=1;i<=5;i++) bars += `<i class="${{i<=n?'on':''}}"></i>`;
+      return `<span class="signal" title="Relevance ${{n}}/5">${{bars}}</span>`;
     }}
-    function themeLabel(value) {{ return text(value).replaceAll("_", " "); }}
-
-    function renderItem(item) {{
-      const heat = item.heat_label
-        ? `<span class="heat ${{item.heat_class}}" title="Relevance score (1-5)">${{html(item.heat_label)}}</span>` : "";
-      const body = (item.summary || item.abstract)
-        ? `<p class="summary">${{html(item.summary || item.abstract)}}</p>` : "";
-      const why = item.why_it_matters
-        ? `<div class="why"><b>Why it matters</b> ${{html(item.why_it_matters)}}</div>` : "";
-      const tag = item.theme
-        ? `<div class="card-foot"><span class="tag" title="${{html(themeLabel(item.theme))}}">${{html(themeLabel(item.theme))}}</span></div>` : "";
-      return `<article class="card">
-  <div class="card-head"><h3 class="card-title"><a href="${{html(item.url)}}" target="_blank" rel="noopener">${{html(item.title)}}</a></h3>${{heat}}</div>
-  <p class="card-meta"><span class="src">${{html(item.source_name)}}</span><span class="dot">·</span><span>${{html(item.date_display)}}</span></p>
+    function renderItem(it){{
+      const why = it.why_it_matters ? `<div class="why"><b>Why it matters</b>${{esc(it.why_it_matters)}}</div>` : "";
+      const body = (it.summary || it.abstract) ? `<p class="summary">${{esc(it.summary || it.abstract)}}</p>` : "";
+      return `<article class="card" data-theme="${{esc(it.theme)}}">
+  <div class="card-top"><span class="chip">${{esc(it.theme)}}</span>${{meter(it.signal)}}</div>
+  <h3 class="card-title"><a href="${{esc(it.url)}}" target="_blank" rel="noopener">${{esc(it.title)}}</a></h3>
+  <p class="card-meta"><span class="src">${{esc(it.source_name)}}</span><span class="sep">/</span><span>${{esc(it.date_display)}}</span></p>
   ${{body}}
   ${{why}}
-  ${{tag}}
 </article>`;
     }}
-
-    function render() {{
-      const query = search.value.trim().toLowerCase();
-      const filtered = items.filter(item => {{
-        const haystack = [item.title, item.summary, item.abstract, item.why_it_matters, item.theme, item.source_name]
-          .map(text).join(" ").toLowerCase();
-        return (!query || haystack.includes(query))
-          && (!source.value || item.source_name === source.value)
-          && (!theme.value || item.theme === theme.value);
+    function render(){{
+      const q = search.value.trim().toLowerCase();
+      const filtered = items.filter(it => {{
+        const hay = [it.title,it.summary,it.abstract,it.why_it_matters,it.theme,it.source_name].map(text).join(" ").toLowerCase();
+        return (!q || hay.includes(q)) && (!source.value || it.source_name === source.value) && (!theme.value || it.theme === theme.value);
       }});
       count.textContent = `${{filtered.length}} item${{filtered.length === 1 ? "" : "s"}}`;
       container.innerHTML = filtered.length ? filtered.map(renderItem).join("") : '<p class="empty">No matching items.</p>';
     }}
-
     search.addEventListener("input", render);
     source.addEventListener("change", render);
     theme.addEventListener("change", render);
   </script>"""
+
     return document(site, page_title=f'{site.get("name", "Polymind")} — Archive', active="archive.html", main_html=main, body_script=script)
 
 
 def archive_item(item) -> dict:
-    cls, label = score_meta(field(item, "relevance_score"))
     return {
         "title": item["title"],
         "url": item["url"],
         "source_name": item["source_name"],
-        "published_date": field(item, "published_date"),
-        "fetched_date": field(item, "fetched_date"),
-        "theme": field(item, "theme"),
+        "theme": canonical_theme(field(item, "theme")),
         "summary": field(item, "summary"),
         "abstract": field(item, "abstract"),
         "why_it_matters": field(item, "why_it_matters"),
         "date_display": relative_date(field(item, "published_date") or field(item, "fetched_date")),
-        "heat_class": cls,
-        "heat_label": label,
+        "signal": signal_level(field(item, "relevance_score")),
     }
 
 
 # ---------------------------------------------------------------------------
-# Shared item card
+# Shared card
 # ---------------------------------------------------------------------------
 def render_card(item) -> str:
     url = field(item, "url") or ""
@@ -367,20 +421,30 @@ def render_card(item) -> str:
     when = relative_date(field(item, "published_date") or field(item, "fetched_date"))
     summary = field(item, "summary") or field(item, "abstract") or ""
     why = field(item, "why_it_matters") or ""
-    theme = format_theme(field(item, "theme") or "")
-    cls, label = score_meta(field(item, "relevance_score"))
+    theme = canonical_theme(field(item, "theme"))
 
-    heat = f'<span class="heat {cls}" title="Relevance score (1-5)">{escape(label)}</span>' if label else ""
     body = f'<p class="summary">{escape(summary)}</p>' if summary else ""
-    why_html = f'<div class="why"><b>Why it matters</b> {escape(why)}</div>' if why else ""
-    tag = f'<div class="card-foot"><span class="tag" title="{escape(theme)}">{escape(theme)}</span></div>' if theme else ""
-    return f"""<article class="card">
-  <div class="card-head"><h3 class="card-title"><a href="{escape(url)}" target="_blank" rel="noopener">{escape(title)}</a></h3>{heat}</div>
-  <p class="card-meta"><span class="src">{escape(src)}</span><span class="dot">·</span><span>{escape(when)}</span></p>
+    why_html = f'<div class="why"><b>Why it matters</b>{escape(why)}</div>' if why else ""
+    return f"""<article class="card" data-theme="{escape(theme)}">
+  <div class="card-top"><span class="chip">{escape(theme)}</span>{signal_html(field(item, "relevance_score"))}</div>
+  <h3 class="card-title"><a href="{escape(url)}" target="_blank" rel="noopener">{escape(title)}</a></h3>
+  <p class="card-meta"><span class="src">{escape(src)}</span><span class="sep">/</span><span>{escape(when)}</span></p>
   {body}
   {why_html}
-  {tag}
 </article>"""
+
+
+def signal_html(value) -> str:
+    n = signal_level(value)
+    bars = "".join(f'<i class="{"on" if i <= n else ""}"></i>' for i in range(1, 6))
+    return f'<span class="signal" title="Relevance {n}/5">{bars}</span>'
+
+
+def signal_level(value) -> int:
+    try:
+        return max(1, min(5, round(float(value))))
+    except (TypeError, ValueError):
+        return 1
 
 
 # ---------------------------------------------------------------------------
@@ -391,6 +455,7 @@ def render_weekly(config: dict, summaries: list) -> str:
     entries = "\n".join(render_weekly_entry(summary) for summary in summaries) or '<p class="empty">No weekly syntheses yet.</p>'
     main = f"""<main class="wrap">
   <section class="page-head">
+    <p class="eyebrow"><span class="br">[</span> weekly synthesis <span class="br">]</span></p>
     <h1>Weekly Synthesis</h1>
     <p>Trends across the week, clustered by theme.</p>
   </section>
@@ -402,24 +467,24 @@ def render_weekly(config: dict, summaries: list) -> str:
 def render_weekly_preview(summary) -> str:
     if summary is None:
         return ""
-    return f"""<section class="card">
-  <h2 class="date-label" style="margin-bottom:8px">Latest weekly synthesis</h2>
-  <p class="weekly-meta">{escape(summary["week_start"])} – {escape(summary["week_end"])}</p>
+    return f"""<section class="card" style="padding:22px 24px">
+  <p class="eyebrow" style="margin-bottom:8px"><span class="br">[</span> latest weekly synthesis <span class="br">]</span></p>
+  <p class="weekly-meta">{escape(summary["week_start"])} &mdash; {escape(summary["week_end"])}</p>
   <div class="prose prose-clip">{markdown_to_html(summary["synthesis_md"])}</div>
-  <a class="weekly-link" href="weekly.html">Read the full synthesis →</a>
+  <a class="weekly-link" href="weekly.html">Read the full synthesis &rarr;</a>
 </section>"""
 
 
 def render_weekly_entry(summary) -> str:
-    return f"""<article class="card">
-  <h2 style="margin:0 0 4px;font-size:1.15rem;letter-spacing:-.01em">{escape(summary["week_start"])} – {escape(summary["week_end"])}</h2>
+    return f"""<article class="card" style="padding:24px">
+  <h2 style="font-family:var(--display);margin:0 0 4px;font-size:1.25rem;letter-spacing:-.02em">{escape(summary["week_start"])} &mdash; {escape(summary["week_end"])}</h2>
   <p class="weekly-meta">Generated {escape(summary["generated_at"])}</p>
   <div class="prose">{markdown_to_html(summary["synthesis_md"])}</div>
 </article>"""
 
 
 def markdown_to_html(markdown: str) -> str:
-    lines = []
+    lines: list[str] = []
     bullets: list[str] = []
 
     def flush():
@@ -452,12 +517,8 @@ _BOLD_RE = re.compile(r"\*\*([^*]+)\*\*")
 
 
 def render_inline(text: str) -> str:
-    """Escape text, then render markdown links [label](url) and **bold** safely."""
     out = escape(text)
-    out = _LINK_RE.sub(
-        lambda m: f'<a href="{m.group(2)}" target="_blank" rel="noopener">{m.group(1)}</a>',
-        out,
-    )
+    out = _LINK_RE.sub(lambda m: f'<a href="{m.group(2)}" target="_blank" rel="noopener">{m.group(1)}</a>', out)
     out = _BOLD_RE.sub(r"<b>\1</b>", out)
     return out
 
@@ -466,11 +527,61 @@ def render_inline(text: str) -> str:
 # Helpers
 # ---------------------------------------------------------------------------
 def field(item, key: str):
-    """Safe accessor that works for dicts and sqlite3.Row (no .get)."""
     try:
         return item[key]
     except (KeyError, IndexError):
         return None
+
+
+_CANON_LOOKUP = {re.sub(r"[^a-z0-9]+", "", t.lower()): t for t in CANONICAL_THEMES}
+
+
+def canonical_theme(raw) -> str:
+    """Map a stored theme (fixed label or legacy free-text) to one of the 7 categories or 'Other'."""
+    if not raw:
+        return "Other"
+    key = re.sub(r"[^a-z0-9]+", "", str(raw).lower())
+    if key in _CANON_LOOKUP:
+        return _CANON_LOOKUP[key]
+    text = str(raw).lower()
+    if any(t in text for t in ("polyinfo", "pi1m", "khazana", "citrine", "polymerize", "database", "informatics platform")):
+        return "Informatics Platforms & Databases"
+    if any(t in text for t in ("language model", "llm", "foundation model", "literature mining", "knowledge graph")):
+        return "LLMs in Materials Science"
+    if any(t in text for t in ("recycl", "depolymeriz", "sustainab", "life cycle", "lifecycle", "bio-based", "circular", "pfas", "waste")):
+        return "Recycling & Sustainability"
+    if any(t in text for t in ("injection molding", "extrusion", "compounding", "process optim", "process control", "manufactur", "digital twin", "machining", "welding", "defect")):
+        return "Processing Optimization"
+    if any(t in text for t in ("characteriz", "ftir", "raman", "spectra", "spectral", "microscop", "microstructure", "imaging", "sem", "tem", " dsc", " dma")):
+        return "Characterization"
+    if any(t in text for t in ("generative", "inverse design", "diffusion model", "autoencoder", "gan", "de novo")):
+        return "Generative & Inverse Design"
+    if any(t in text for t in ("property prediction", "property", "qspr", "qsar", "prediction", "informatics", "discovery", "screening")):
+        return "Property Prediction"
+    return "Other"
+
+
+def polymer_terms(config: dict) -> list[str]:
+    targeting = config.get("targeting", {}) if isinstance(config, dict) else {}
+    return [str(term).lower() for term in targeting.get("polymer_boost_terms", [])]
+
+
+def is_polymer(item, terms: list[str]) -> bool:
+    if not terms:
+        return False
+    haystack = " ".join(str(field(item, k) or "") for k in ("title", "summary", "abstract", "theme")).lower()
+    return any(term in haystack for term in terms)
+
+
+def rank_key(item) -> tuple[float, float]:
+    return (-_num(field(item, "relevance_score")), -_num(field(item, "quality_score")))
+
+
+def _num(value) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def _parse_date(value):
@@ -488,31 +599,15 @@ def relative_date(value) -> str:
         return str(value or "")
     delta = (date.today() - parsed).days
     if delta <= 0:
-        return "Today"
+        return "today"
     if delta == 1:
-        return "Yesterday"
+        return "yesterday"
     if delta < 7:
-        return f"{delta} days ago"
+        return f"{delta}d ago"
     if delta < 30:
         weeks = delta // 7
-        return f"{weeks} week{'s' if weeks > 1 else ''} ago"
+        return f"{weeks}w ago"
     return f"{parsed.strftime('%b')} {parsed.day}, {parsed.year}"
-
-
-def score_meta(value) -> tuple[str, str]:
-    """Map a 1-5 relevance score to a (css class, label) heat badge."""
-    if value is None:
-        return ("", "")
-    try:
-        score = float(value)
-    except (TypeError, ValueError):
-        return ("", "")
-    label = f"{score:g}"
-    if score >= 4:
-        return ("heat-high", label)
-    if score >= 3:
-        return ("heat-med", label)
-    return ("heat-low", label)
 
 
 def option_list(values: list[str], *, labeler=None) -> str:

@@ -73,7 +73,7 @@ class StoreTests(unittest.TestCase):
         rss = site_build.render_rss(config, [item])
 
         self.assertIn("Machine learning for polymer design", html)
-        self.assertIn("property prediction", html)
+        self.assertIn("Property Prediction", html)
         self.assertIn("https://polymind.github.io/", rss)
 
     def test_archive_render_includes_filters_and_items(self):
@@ -103,7 +103,7 @@ class StoreTests(unittest.TestCase):
 
         self.assertIn('id="search"', html)
         self.assertIn('value="Example"', html)
-        self.assertIn('value="property prediction"', html)
+        self.assertIn('value="Property Prediction"', html)
         self.assertIn("Machine learning for polymer design", html)
 
     def test_archive_json_escapes_script_closing_sequences(self):
