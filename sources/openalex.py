@@ -5,7 +5,7 @@ from typing import Any
 from urllib.parse import urlencode
 
 from models import Item
-from .base import SourceAdapter, SourceResult, clean_text, fetch_url, resolve_filter_placeholders
+from .base import SourceAdapter, SourceResult, clean_text, fetch_url, normalize_date, resolve_filter_placeholders
 
 
 class OpenAlexAdapter(SourceAdapter):
@@ -52,7 +52,7 @@ def parse_openalex(payload: dict[str, Any], *, tier: str) -> list[Item]:
                     source_name="OpenAlex",
                     tier=tier,
                     authors=[author for author in authors if author],
-                    published_date=work.get("publication_date"),
+                    published_date=normalize_date(work.get("publication_date")),
                     abstract=abstract,
                     doi=work.get("doi"),
                 )

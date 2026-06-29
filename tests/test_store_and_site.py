@@ -63,7 +63,7 @@ class StoreTests(unittest.TestCase):
             "source_name": "Example",
             "published_date": "2026-06-29",
             "fetched_date": "2026-06-29",
-            "theme": "property prediction",
+            "theme": "property_prediction",
             "summary": "A useful test item.",
             "abstract": None,
             "why_it_matters": "It proves rendering works.",
@@ -73,6 +73,7 @@ class StoreTests(unittest.TestCase):
         rss = site_build.render_rss(config, [item])
 
         self.assertIn("Machine learning for polymer design", html)
+        self.assertIn("property prediction", html)
         self.assertIn("https://polymind.github.io/", rss)
 
     def test_archive_render_includes_filters_and_items(self):
@@ -110,6 +111,11 @@ class StoreTests(unittest.TestCase):
 
         self.assertIn("<\\/script>", rendered)
         self.assertNotIn("</script>", rendered)
+
+    def test_markdown_heading_formats_theme_identifiers(self):
+        html = site_build.markdown_to_html("### materials_informatics_property_prediction")
+
+        self.assertIn("materials informatics property prediction", html)
 
     def test_build_site_writes_archive_page(self):
         with tempfile.TemporaryDirectory() as tmpdir:

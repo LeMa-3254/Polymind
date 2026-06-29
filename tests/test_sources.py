@@ -1,7 +1,8 @@
 import unittest
 
 from models import Item
-from sources.base import resolve_filter_placeholders, vocabulary_match
+from sources.base import normalize_date, resolve_filter_placeholders, vocabulary_match
+from sources.crossref import date_parts
 from sources.journal_rss import parse_rss_or_atom
 from sources.openalex import reconstruct_abstract
 
@@ -66,6 +67,12 @@ class SourceTests(unittest.TestCase):
         )
 
         self.assertRegex(resolved["from_publication_date"], r"^\d{4}-\d{2}-\d{2}$")
+
+    def test_normalize_date_rejects_future_dates(self):
+        self.assertIsNone(normalize_date("2035-09-05"))
+
+    def test_crossref_date_parts_rejects_future_dates(self):
+        self.assertIsNone(date_parts({"date-parts": [[2035, 9, 5]]}))
 
 
 if __name__ == "__main__":

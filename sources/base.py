@@ -64,11 +64,13 @@ def normalize_date(value: str | None) -> str | None:
         return None
     value = value.strip()
     try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00")).date().isoformat()
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00")).date()
+        return parsed.isoformat() if parsed <= datetime.now(timezone.utc).date() else None
     except ValueError:
         pass
     try:
-        return parsedate_to_datetime(value).date().isoformat()
+        parsed = parsedate_to_datetime(value).date()
+        return parsed.isoformat() if parsed <= datetime.now(timezone.utc).date() else None
     except (TypeError, ValueError, IndexError):
         return None
 

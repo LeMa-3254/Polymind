@@ -111,6 +111,31 @@ class ModelIntegrationTests(unittest.TestCase):
         self.assertEqual(item.why_it_matters, "It helps materials teams prioritize experiments.")
         self.assertEqual(token_usage["anthropic_enrichment"]["output_tokens"], 2)
 
+    def test_enrich_items_bootstraps_items_beyond_model_limit(self):
+        config = dict(CONFIG)
+        config["enrich"] = dict(CONFIG["enrich"], max_items_per_run=1)
+        first = make_item()
+        first.status = "included"
+        first.relevance_score = 5
+        second = make_item()
+        second.id = "second"
+        second.url = "https://example.test/second"
+        second.status = "included"
+        second.relevance_score = 4
+        client = FakeModelClient(
+            {
+                "summary": "Model summary.",
+                "why_it_matters": "Model why.",
+            }
+        )
+
+        enriched = enrich_items([first, second], config, model_client=client)
+
+        self.assertEqual(len(enriched), 2)
+        self.assertEqual(first.summary, "Model summary.")
+        self.assertEqual(second.summary, second.abstract)
+        self.assertEqual(second.why_it_matters, "Potentially relevant to AI-enabled polymer and materials development.")
+
     def test_embed_items_uses_injected_embedding_client_and_tracks_usage(self):
         item = make_item()
         item.status = "included"

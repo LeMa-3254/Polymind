@@ -16,17 +16,21 @@ def enrich_items(
 ) -> list[Item]:
     limit = config.get("enrich", {}).get("max_items_per_run", 40)
     client = model_client if model_client is not None else build_anthropic_client()
-    enriched: list[Item] = []
-    for item in sorted(items, key=lambda current: current.relevance_score or 0, reverse=True)[:limit]:
-        if client is None:
+    for item in items:
+        if not item.summary or not item.why_it_matters:
             bootstrap_enrich_item(item)
-        else:
-            try:
-                enrich_item_with_model(item, config, client=client, token_usage=token_usage)
-            except Exception:
-                bootstrap_enrich_item(item)
-        enriched.append(item)
-    return enriched
+    if client is None:
+        return items
+
+    for item in sorted(items, key=lambda current: current.relevance_score or 0, reverse=True)[:limit]:
+        previous_summary = item.summary
+        previous_why = item.why_it_matters
+        try:
+            enrich_item_with_model(item, config, client=client, token_usage=token_usage)
+        except Exception:
+            item.summary = previous_summary
+            item.why_it_matters = previous_why
+    return items
 
 
 def enrich_item_with_model(

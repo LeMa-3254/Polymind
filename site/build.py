@@ -79,7 +79,7 @@ def render_archive(config: dict, items: list) -> str:
     site = config["site"]
     cards = "\n".join(render_card(item) for item in items) or "<p>No included items yet.</p>"
     sources = option_list(sorted({item["source_name"] for item in items if item["source_name"]}))
-    themes = option_list(sorted({item["theme"] for item in items if item["theme"]}))
+    themes = option_list(sorted({item["theme"] for item in items if item["theme"]}), labeler=format_theme)
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -140,7 +140,7 @@ def render_archive(config: dict, items: list) -> str:
 
     function renderItem(item) {{
       const date = item.published_date || item.fetched_date || "";
-      const theme = item.theme || "materials AI";
+      const theme = themeLabel(item.theme || "materials AI");
       const summary = item.summary || item.abstract || "";
       return `<article>
   <h2><a href="${{html(item.url)}}">${{html(item.title)}}</a></h2>
@@ -163,6 +163,10 @@ def render_archive(config: dict, items: list) -> str:
       }});
       count.textContent = `${{filtered.length}} item${{filtered.length === 1 ? "" : "s"}}`;
       container.innerHTML = filtered.length ? filtered.map(renderItem).join("") : "<p>No matching items.</p>";
+    }}
+
+    function themeLabel(value) {{
+      return text(value).replaceAll("_", " ");
     }}
 
     search.addEventListener("input", render);
@@ -188,8 +192,13 @@ def archive_item(item) -> dict:
     }
 
 
-def option_list(values: list[str]) -> str:
-    return "".join(f'<option value="{escape(value)}">{escape(value)}</option>' for value in values)
+def option_list(values: list[str], *, labeler=None) -> str:
+    labeler = labeler or (lambda value: value)
+    return "".join(f'<option value="{escape(value)}">{escape(labeler(value))}</option>' for value in values)
+
+
+def format_theme(value: str) -> str:
+    return value.replace("_", " ")
 
 
 def json_for_script(value) -> str:
@@ -210,7 +219,7 @@ def render_weekly_preview(summary) -> str:
 def render_card(item) -> str:
     return f"""<article>
   <h2><a href="{escape(item["url"])}">{escape(item["title"])}</a></h2>
-  <p class="meta">{escape(item["source_name"])} · {escape(item["published_date"] or item["fetched_date"])} · {escape(item["theme"] or "materials AI")}</p>
+  <p class="meta">{escape(item["source_name"])} · {escape(item["published_date"] or item["fetched_date"])} · {escape(format_theme(item["theme"] or "materials AI"))}</p>
   <p>{escape(item["summary"] or item["abstract"] or "")}</p>
   <p><strong>Why it matters:</strong> {escape(item["why_it_matters"] or "")}</p>
 </article>"""
@@ -260,9 +269,9 @@ def markdown_to_html(markdown: str) -> str:
         if not line:
             continue
         if line.startswith("### "):
-            lines.append(f"<h3>{escape(line[4:])}</h3>")
+            lines.append(f"<h3>{escape(format_theme(line[4:]))}</h3>")
         elif line.startswith("## "):
-            lines.append(f"<h2>{escape(line[3:])}</h2>")
+            lines.append(f"<h2>{escape(format_theme(line[3:]))}</h2>")
         elif line.startswith("- "):
             lines.append(f"<p>&bull; {escape(line[2:])}</p>")
         else:

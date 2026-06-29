@@ -5,7 +5,7 @@ from typing import Any
 from urllib.parse import urlencode
 
 from models import Item
-from .base import SourceAdapter, SourceResult, clean_text, fetch_url, resolve_filter_placeholders
+from .base import SourceAdapter, SourceResult, clean_text, fetch_url, normalize_date, resolve_filter_placeholders
 
 
 class CrossrefAdapter(SourceAdapter):
@@ -67,4 +67,4 @@ def date_parts(value: dict[str, Any] | None) -> str | None:
     year = parts[0]
     month = parts[1] if len(parts) > 1 else 1
     day = parts[2] if len(parts) > 2 else 1
-    return f"{year:04d}-{month:02d}-{day:02d}"
+    return normalize_date(f"{year:04d}-{month:02d}-{day:02d}")
