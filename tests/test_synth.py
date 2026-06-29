@@ -1,7 +1,7 @@
 from datetime import date
 import unittest
 
-from pipeline.synth import current_week_bounds, fallback_synthesis, synthesize_week
+from pipeline.synth import last_complete_week_bounds, fallback_synthesis, synthesize_week
 
 
 class FakeModelClient:
@@ -10,8 +10,9 @@ class FakeModelClient:
 
 
 class SynthTests(unittest.TestCase):
-    def test_current_week_bounds_uses_monday_to_sunday(self):
-        self.assertEqual(current_week_bounds(date(2026, 6, 29)), ("2026-06-29", "2026-07-05"))
+    def test_last_complete_week_bounds_is_previous_monday_to_sunday(self):
+        # 2026-06-29 is a Monday; the most recent finished week is the prior Mon–Sun.
+        self.assertEqual(last_complete_week_bounds(date(2026, 6, 29)), ("2026-06-22", "2026-06-28"))
 
     def test_fallback_synthesis_groups_by_theme(self):
         markdown = fallback_synthesis(

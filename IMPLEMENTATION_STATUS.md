@@ -105,15 +105,14 @@ reflect the old broad targeting until a run is executed.
   gate is too strict or too loose (re-filtering the old pool kept ~22 of 160 items).
 - Revisit disabled RSC/ACS journal RSS feeds or replace them with accessible source URLs.
 - Run Voyage embedding generation against live API credentials and verify duplicate behavior across repeated live runs.
-- Fix the weekly window: with corrected publication dates the current week holds only one item, so the
-  weekly synthesis is sparse — consider keying the window on fetched/digest date or a wider lookback
-  (`pipeline/run.py` `current_week_bounds` usage).
-- Regenerate the stored weekly synthesis after the window fix (the committed one predates these changes).
+- Confirm the weekly synthesis is well-populated now that the window targets the last complete week and
+  ingest looks back 7 days (regenerated on the next run; the committed summary predates these changes).
 - Add verification tests for adapters, gate behavior, CI dry-runs, and cost caps.
 
 ## Decisions Locked
 
-- Daily pipeline run with weekly synthesis as the shareable trend headline.
+- Weekly pipeline run (Mondays) with synthesis; `lookback_hours` widened to 168 (7 days) and the
+  synthesis window set to the last complete Monday–Sunday week.
 - Static-only production deployment through GitHub Pages.
 - Public access for v1.
 - Config-driven model selection in `targeting.yaml`.

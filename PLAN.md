@@ -17,7 +17,7 @@ look for and *where* to look. Tune precision vs. recall there, not in code.
 
 | Decision | Choice | Why |
 |---|---|---|
-| **Cadence** | Daily pipeline run; weekly synthesis is the shareable headline | Daily run keeps the 30-day dedup memory fresh and catches fast movers; weekly synthesis reads as *trends, not lists* |
+| **Cadence** | One weekly run (Mondays), with synthesis | Matches a research-digest rhythm; `lookback_hours` is 168 (7 days) so nothing is missed between runs; the synthesis covers the last complete Mon–Sun week and reads as *trends, not lists* |
 | **Host** | GitHub Pages first; custom domain later | Simplest share URL, free, native to the Actions workflow; custom domain is a config-only follow-up once registered |
 | **Embeddings** | Voyage `voyage-3` (hosted) | One API call/item, no ~100 MB model download per CI run; cents/month |
 | **Access** | Public | Public news + source links; enables RSS subscribe and link-sharing |
@@ -31,7 +31,7 @@ look for and *where* to look. Tune precision vs. recall there, not in code.
 ## Architecture
 
 ```
-GitHub Actions cron (daily)
+GitHub Actions cron (weekly, Mondays)
   → Ingest    (MVP: arXiv, OpenAlex, Crossref, journal RSS — per targeting.yaml)
   → Gate      (scoring model: relevance + quality, structured JSON out)
   → Dedup     (Voyage embeddings vs. rolling 30-day store; cosine ≥ 0.85)
@@ -77,7 +77,7 @@ polymer-ai-tracker/
 ├─ prompts/          # relevance.md, enrich.md, synth.md
 ├─ targeting.yaml    # single source of truth for what/where  (EXISTS)
 ├─ PLAN.md           # this document
-└─ .github/workflows/daily.yml
+└─ .github/workflows/weekly.yml
 ```
 
 ---
@@ -97,7 +97,7 @@ polymer-ai-tracker/
 
 ## Pipeline stages — requirement → mechanism
 
-1. **Ingest.** Adapters emit normalized `Item`s; pull only `meta.lookback_hours` (48h) of items.
+1. **Ingest.** Adapters emit normalized `Item`s; pull only `meta.lookback_hours` (168h / 7 days) of items.
    Apply the keyword match rule (≥1 `ai_term` **AND** ≥1 `materials_term`, minus `exclude_terms`)
    where the source supports it.
    - **Politeness / limits:** set `meta.contact_email` for the OpenAlex/Crossref polite pool; throttle
@@ -148,10 +148,9 @@ polymer-ai-tracker/
 
 ## Automation & secrets
 
-- A single GitHub Actions workflow on a daily cron: run pipeline → build site → deploy → commit
-  updated `tracker.db`. A separate weekly trigger (or a Monday branch in the same job) produces the
-  synthesis. Optionally email/Slack the daily digest so the team gets push, while the site is the
-  searchable pull archive.
+- A single GitHub Actions workflow on a weekly cron (Mondays): run pipeline → build site → deploy →
+  commit updated `tracker.db`. The same run generates the weekly synthesis. Optionally email/Slack the
+  digest so the team gets push, while the site is the searchable pull archive.
 - **Secrets (repo settings):** `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`. Verify ZDR for Anthropic at
   account/API configuration time before production runs.
 

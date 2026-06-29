@@ -14,7 +14,7 @@ from pipeline.embeddings import embed_items
 from pipeline.enrich import enrich_items
 from pipeline.ingest import ingest_enabled_sources
 from pipeline.score import score_item
-from pipeline.synth import current_week_bounds, synthesize_week
+from pipeline.synth import last_complete_week_bounds, synthesize_week
 from store.db import (
     connect,
     included_items_between,
@@ -50,7 +50,7 @@ def run_pipeline(
         enriched = enrich_items(included, config, token_usage=token_usage)
         upsert_items(db, deduped)
         if weekly_synthesis:
-            week_start, week_end = current_week_bounds()
+            week_start, week_end = last_complete_week_bounds()
             weekly_items = included_items_between(db, start_date=week_start, end_date=week_end)
             synthesis_md = synthesize_week(weekly_items, config, token_usage=token_usage)
             upsert_weekly_summary(

@@ -13,7 +13,7 @@ class PipelineRunTests(unittest.TestCase):
             root = Path(tmpdir)
             config_path = root / "targeting.yaml"
             db_path = root / "tracker.db"
-            week_start, _week_end = pipeline_run.current_week_bounds()
+            week_start, _week_end = pipeline_run.last_complete_week_bounds()
             config_path.write_text(
                 "\n".join(
                     [

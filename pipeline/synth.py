@@ -8,10 +8,13 @@ from typing import Any
 from pipeline.model_clients import add_token_usage, build_anthropic_client, read_prompt
 
 
-def current_week_bounds(today: date | None = None) -> tuple[str, str]:
+def last_complete_week_bounds(today: date | None = None) -> tuple[str, str]:
+    """The most recent finished Monday–Sunday week. A weekly run on Monday summarizes
+    the week that just ended, not the one that is only starting."""
     today = today or date.today()
-    start = today - timedelta(days=today.weekday())
-    end = start + timedelta(days=6)
+    this_monday = today - timedelta(days=today.weekday())
+    start = this_monday - timedelta(days=7)
+    end = this_monday - timedelta(days=1)
     return start.isoformat(), end.isoformat()
 
 

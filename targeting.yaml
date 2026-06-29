@@ -12,7 +12,7 @@
 # ============================================================================
 
 meta:
-  lookback_hours: 48          # freshness window: only items newer than this
+  lookback_hours: 168         # freshness window (7 days) — matches the weekly run cadence
   timezone: America/Los_Angeles
   contact_email: "tengteng3254@gmail.com"
 
