@@ -45,17 +45,44 @@ def synthesize_week(
 
 
 def fallback_synthesis(items: list[Any]) -> str:
-    grouped: dict[str, list[str]] = defaultdict(list)
-    for item in items:
-        grouped[str(item_value(item, "theme") or "materials AI")].append(str(item_value(item, "title")))
+    ranked = sorted(items, key=_rank_key)
 
-    lines = ["## Weekly Synthesis", ""]
-    for theme, titles in sorted(grouped.items()):
+    lines: list[str] = ["## This week in brief", ""]
+    for item in ranked[:5]:
+        detail = str(item_value(item, "why_it_matters") or item_value(item, "summary") or "").strip()
+        detail = detail.split("\n")[0]
+        lines.append(f"- **{_link(item)}** — {detail}" if detail else f"- **{_link(item)}**")
+    lines.append("")
+
+    grouped: dict[str, list[Any]] = defaultdict(list)
+    for item in ranked:
+        grouped[str(item_value(item, "theme") or "Materials AI")].append(item)
+
+    lines.append("## Trends by theme")
+    lines.append("")
+    for theme, group in sorted(grouped.items()):
         lines.append(f"### {theme}")
-        for title in titles[:5]:
-            lines.append(f"- {title}")
+        for item in group[:4]:
+            lines.append(f"- {_link(item)}")
         lines.append("")
     return "\n".join(lines).strip()
+
+
+def _rank_key(item: Any) -> tuple[float, float]:
+    return (-_num(item_value(item, "relevance_score")), -_num(item_value(item, "quality_score")))
+
+
+def _num(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _link(item: Any) -> str:
+    title = str(item_value(item, "title") or "Untitled").replace("[", "(").replace("]", ")")
+    url = str(item_value(item, "url") or "")
+    return f"[{title}]({url})" if url.startswith("http") else title
 
 
 def item_payload(item: Any) -> dict[str, Any]:
