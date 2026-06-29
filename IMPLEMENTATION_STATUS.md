@@ -58,6 +58,8 @@ deployment settings still need to be verified in GitHub.
 - Added `Makefile` targets for tests, pipeline runs, static site builds, and cleanup.
 - Added initial `.github/workflows/daily.yml` for tests, daily pipeline runs, site build, Pages deploy,
   and SQLite commit-back.
+- Updated GitHub Actions pins to current Node 24-compatible action major versions after the first manual
+  run reported a Node 20 deprecation warning.
 - Initialized the local git repository and pushed it to `LeMa-3254/Polymind`.
 
 ## Remaining
