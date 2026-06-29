@@ -97,6 +97,16 @@ reflect the old broad targeting until a run is executed.
 - Added a fixed `targeting.themes` taxonomy (the seven categories) and made the scoring model and the
   bootstrap `infer_theme` map to it, replacing the prior free-text theme sentences.
 
+### Scoring & scope tightening
+- Switched scores to a **0–100** scale; `min_score` 70 (target ~20 quality items/week),
+  `high_quality_score` 80 (featured in a separate "High signal" section on the feed).
+- Fixed score inflation: tier/polymer priors are no longer added on top of the model's score, so a
+  "not really polymer" verdict can't be pushed past the threshold (priors now only shape the bootstrap).
+- Added a pre-score keyword gate + `max_candidates` cap (80) in `prefilter_candidates`, so far fewer
+  items reach the model — faster, cheaper runs that score the most promising (polymer-first, recent).
+- Narrowed arXiv to cond-mat.soft / cond-mat.mtrl-sci / physics.chem-ph (dropped the cs.LG/cs.CE
+  firehoses); lowered the enrichment cap to 25.
+
 ## Remaining
 
 - Rerun the GitHub Actions workflow with the new targeting + UI and confirm the Pages deployment shows

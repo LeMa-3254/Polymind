@@ -16,9 +16,7 @@ CONFIG = {
     "scoring": {
         "model": "test-scoring-model",
         "rubric_prompt": "prompts/relevance.md",
-        "min_score": 3,
-        "polymer_boost": 1,
-        "source_tier_prior": {"A": 1.0},
+        "min_score": 70,
     },
     "enrich": {
         "model": "test-enrich-model",
@@ -78,19 +76,19 @@ class ModelIntegrationTests(unittest.TestCase):
         token_usage = {}
         client = FakeModelClient(
             {
-                "relevance": 3,
-                "quality": 5,
+                "relevance": 88,
+                "quality": 90,
                 "reason": "Strong polymer/materials AI fit.",
-                "theme": "property prediction",
+                "theme": "Property Prediction",
             }
         )
 
         score_item(item, CONFIG, model_client=client, token_usage=token_usage)
 
         self.assertEqual(item.status, "included")
-        self.assertEqual(item.relevance_score, 5)
-        self.assertEqual(item.quality_score, 5)
-        self.assertEqual(item.theme, "property prediction")
+        self.assertEqual(item.relevance_score, 88)
+        self.assertEqual(item.quality_score, 90)
+        self.assertEqual(item.theme, "Property Prediction")
         self.assertEqual(token_usage["anthropic_scoring"]["input_tokens"], 3)
 
     def test_enrich_items_uses_injected_model_client_and_tracks_usage(self):

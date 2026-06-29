@@ -195,8 +195,7 @@ sources:
       - cond-mat.soft        # soft condensed matter (polymers, soft matter)
       - cond-mat.mtrl-sci    # materials science
       - physics.chem-ph      # chemical physics
-      - cs.LG                # machine learning
-      - cs.CE                # computational engineering
+      # cs.LG / cs.CE dropped: huge general ML/engineering firehoses, low polymer signal
     # logic: pull new submissions in each category, keep those whose
     # title/abstract satisfy the targeting match rule above.
     filter_with_vocabulary: true
@@ -299,15 +298,14 @@ sources:
 # SCORING GATE — Claude relevance + quality scoring
 # ----------------------------------------------------------------------------
 scoring:
-  model: "claude-haiku-4-5-20251001"   # cheap, high-volume scoring
+  model: "claude-haiku-4-5-20251001"   # cheap scoring
   rubric_prompt: "prompts/relevance.md"
-  min_score: 3                          # keep items scoring >= this (1–5)
-  polymer_boost: 1                      # +score if polymer_boost_terms hit
-  source_tier_prior:                    # added to raw score before threshold
-    A: 1.0
-    B: 0.5
-    C: 0.0
-    D: -0.5
+  scale: 100                            # scores are 0–100
+  max_candidates: 80                    # cap items sent to the model per run (speed + cost)
+  min_score: 70                         # keep items scoring >= this; tune to land ~20 quality/week
+  high_quality_score: 80                # >= this is "high signal", featured separately on the site
+  # Note: tier/polymer priors are NOT added to model scores (the rubric already judges polymer fit);
+  # they only shape the keyword bootstrap fallback when no model is available.
 
 # ----------------------------------------------------------------------------
 # ENRICHMENT — concise item summaries after scoring + dedup
@@ -315,7 +313,7 @@ scoring:
 enrich:
   model: "claude-sonnet-4-5-20250929"   # stronger tier for user-facing summaries
   prompt: "prompts/enrich.md"
-  max_items_per_run: 40                  # cost cap; overflow rolls to later runs
+  max_items_per_run: 25                  # cost cap; ~enough for the weekly quality set
 
 # ----------------------------------------------------------------------------
 # WEEKLY SYNTHESIS — trend narrative over the week's included items

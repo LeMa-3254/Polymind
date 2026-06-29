@@ -46,44 +46,43 @@ def score_item_with_model(
     return item
 
 
+TIER_POINTS = {"A": 15, "B": 8, "C": 0, "D": -15}
+
+
 def bootstrap_score_item(item: Item, config: dict[str, Any]) -> Item:
+    """Keyword/tier heuristic on the 0–100 scale, used only when no model is available."""
     scoring = config.get("scoring", {})
-    tier_prior = scoring.get("source_tier_prior", {}).get(item.tier, 0)
-    base_relevance = 3 if vocabulary_match(item, config) else 1
     text = f"{item.title} {item.abstract or ''}".lower()
     boost_terms = [term.lower() for term in config.get("targeting", {}).get("polymer_boost_terms", [])]
-    boost = scoring.get("polymer_boost", 0) if any(term in text for term in boost_terms) else 0
+    base = 60 if vocabulary_match(item, config) else 25
+    boost = 15 if any(term in text for term in boost_terms) else 0
+    tier = TIER_POINTS.get(item.tier, 0)
 
-    item.relevance_score = min(5, base_relevance + boost + tier_prior)
-    item.quality_score = min(5, 3 + tier_prior)
-    item.score_reason = "Keyword/tier bootstrap score; replace with configured model scoring."
+    item.relevance_score = float(max(0, min(100, base + boost + tier)))
+    item.quality_score = float(max(0, min(100, 55 + tier)))
+    item.score_reason = "Keyword/tier bootstrap score (0–100); replace with configured model scoring."
     item.theme = infer_theme(item)
-    item.status = "included" if item.relevance_score >= scoring.get("min_score", 3) else "dropped_lowscore"
+    item.status = "included" if item.relevance_score >= scoring.get("min_score", 70) else "dropped_lowscore"
     return item
 
 
 def apply_score_result(item: Item, config: dict[str, Any], result: dict[str, Any]) -> None:
+    # Trust the model's rubric judgment directly (0–100); no tier/polymer priors are added here,
+    # so a "not really polymer" verdict cannot be inflated past the threshold.
     scoring = config.get("scoring", {})
-    raw_relevance = clamp_score(result.get("relevance"))
-    raw_quality = clamp_score(result.get("quality"))
-    tier_prior = float(scoring.get("source_tier_prior", {}).get(item.tier, 0))
-    text = f"{item.title} {item.abstract or ''}".lower()
-    boost_terms = [term.lower() for term in config.get("targeting", {}).get("polymer_boost_terms", [])]
-    boost = float(scoring.get("polymer_boost", 0)) if any(term in text for term in boost_terms) else 0
-
-    item.relevance_score = min(5, raw_relevance + boost + tier_prior)
-    item.quality_score = raw_quality
+    item.relevance_score = clamp_score(result.get("relevance"))
+    item.quality_score = clamp_score(result.get("quality"))
     item.score_reason = str(result.get("reason") or "Model scored relevance and quality.")
     item.theme = str(result.get("theme") or infer_theme(item))
-    item.status = "included" if item.relevance_score >= scoring.get("min_score", 3) else "dropped_lowscore"
+    item.status = "included" if item.relevance_score >= scoring.get("min_score", 70) else "dropped_lowscore"
 
 
 def clamp_score(value: Any) -> float:
     try:
         score = float(value)
     except (TypeError, ValueError):
-        score = 1.0
-    return max(1.0, min(5.0, score))
+        score = 0.0
+    return max(0.0, min(100.0, score))
 
 
 def item_payload(item: Item) -> dict[str, Any]:

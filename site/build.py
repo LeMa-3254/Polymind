@@ -116,12 +116,19 @@ a{color:inherit;text-decoration:none}
 .why b{font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;
   color:var(--signal-ink);font-weight:600;display:block;margin-bottom:3px}
 
-/* relevance signal meter */
+/* relevance signal meter (0–100 score) */
 .signal{display:inline-flex;align-items:flex-end;gap:3px;height:15px;flex:none}
 .signal i{width:4px;border-radius:1.5px;background:var(--line-strong);display:block}
 .signal i:nth-child(1){height:6px}.signal i:nth-child(2){height:8.5px}.signal i:nth-child(3){height:11px}
 .signal i:nth-child(4){height:13px}.signal i:nth-child(5){height:15px}
-.signal i.on{background:var(--signal)}
+.signal i.on{background:#b9c0d0}
+.signal .signal-num{font-family:var(--mono);font-size:.76rem;font-weight:600;color:var(--muted);
+  margin-left:6px;align-self:center}
+.signal-high i.on{background:var(--signal)}
+.signal-high .signal-num{color:var(--signal-ink);font-weight:700}
+.hi-badge{font-family:var(--mono);font-size:.62rem;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--signal-ink);background:var(--signal-soft);
+  border-radius:6px;padding:3px 7px;margin-left:8px}
 
 /* empty */
 .empty{padding:44px 0;text-align:center;color:var(--faint);font-family:var(--mono);font-size:.85rem}
@@ -267,9 +274,13 @@ def render_index(config: dict, items: list, latest_weekly=None) -> str:
     site = config["site"]
     tagline = site.get("tagline") or site.get("description", "")
 
+    high_threshold = int(config.get("scoring", {}).get("high_quality_score", 80))
     terms = polymer_terms(config)
     ranked = sorted(items, key=lambda it: (0 if is_polymer(it, terms) else 1, *rank_key(it)))
     feed_items = ranked[:INDEX_LIMIT]
+
+    high = [it for it in feed_items if _num(field(it, "relevance_score")) >= high_threshold]
+    rest = [it for it in feed_items if _num(field(it, "relevance_score")) < high_threshold]
 
     # category counts for the tab bar
     counts: dict[str, int] = {}
@@ -281,7 +292,12 @@ def render_index(config: dict, items: list, latest_weekly=None) -> str:
             tabs.append(f'<button class="tab" data-filter="{escape(theme)}">{escape(theme)} <span class="tab-n">{counts[theme]}</span></button>')
     tabs_html = "".join(tabs)
 
-    cards = "\n".join(render_card(item) for item in feed_items) or '<p class="empty">No included items yet.</p>'
+    sections = []
+    if high:
+        sections.append(render_section(f"High signal &middot; {high_threshold}+", high, high_threshold))
+    if rest:
+        sections.append(render_section("More this week" if high else "This week", rest, high_threshold))
+    cards = "\n".join(sections) or '<p class="empty">No included items yet.</p>'
     latest_date = relative_date(field(feed_items[0], "published_date") or field(feed_items[0], "fetched_date")) if feed_items else "—"
 
     hero = f"""<section class="hero">
@@ -355,6 +371,7 @@ def render_archive(config: dict, items: list) -> str:
 </main>"""
 
     script = f"""<script>
+    const HIGH = {int(config.get("scoring", {}).get("high_quality_score", 80))};
     const items = {json_for_script([archive_item(item) for item in items])};
     const search = document.querySelector("#search");
     const source = document.querySelector("#source");
@@ -364,16 +381,18 @@ def render_archive(config: dict, items: list) -> str:
 
     function text(v){{ return v == null ? "" : String(v); }}
     function esc(v){{ return text(v).replace(/[&<>"']/g, c => ({{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}}[c])); }}
-    function meter(n){{
+    function meter(score){{
+      const n = Math.max(1, Math.min(5, Math.round(score/20)));
       let bars = "";
       for (let i=1;i<=5;i++) bars += `<i class="${{i<=n?'on':''}}"></i>`;
-      return `<span class="signal" title="Relevance ${{n}}/5">${{bars}}</span>`;
+      const high = score >= HIGH;
+      return `<span class="signal ${{high?'signal-high':''}}" title="Score ${{score}}/100">${{bars}}<span class="signal-num">${{score}}</span></span>`;
     }}
     function renderItem(it){{
       const why = it.why_it_matters ? `<div class="why"><b>Why it matters</b>${{esc(it.why_it_matters)}}</div>` : "";
       const body = (it.summary || it.abstract) ? `<p class="summary">${{esc(it.summary || it.abstract)}}</p>` : "";
       return `<article class="card" data-theme="${{esc(it.theme)}}">
-  <div class="card-top"><span class="chip">${{esc(it.theme)}}</span>${{meter(it.signal)}}</div>
+  <div class="card-top"><span class="chip">${{esc(it.theme)}}</span>${{meter(it.score)}}</div>
   <h3 class="card-title"><a href="${{esc(it.url)}}" target="_blank" rel="noopener">${{esc(it.title)}}</a></h3>
   <p class="card-meta"><span class="src">${{esc(it.source_name)}}</span><span class="sep">/</span><span>${{esc(it.date_display)}}</span></p>
   ${{body}}
@@ -407,14 +426,19 @@ def archive_item(item) -> dict:
         "abstract": field(item, "abstract"),
         "why_it_matters": field(item, "why_it_matters"),
         "date_display": relative_date(field(item, "published_date") or field(item, "fetched_date")),
-        "signal": signal_level(field(item, "relevance_score")),
+        "score": score_int(field(item, "relevance_score")) or 0,
     }
 
 
 # ---------------------------------------------------------------------------
 # Shared card
 # ---------------------------------------------------------------------------
-def render_card(item) -> str:
+def render_section(label: str, items: list, high_threshold: int = 80) -> str:
+    cards = "\n".join(render_card(item, high_threshold) for item in items)
+    return f'<section class="date-group"><h2 class="section-label"><span class="br">[</span> {label} <span class="br">]</span></h2>{cards}</section>'
+
+
+def render_card(item, high_threshold: int = 80) -> str:
     url = field(item, "url") or ""
     title = field(item, "title") or ""
     src = field(item, "source_name") or ""
@@ -426,7 +450,7 @@ def render_card(item) -> str:
     body = f'<p class="summary">{escape(summary)}</p>' if summary else ""
     why_html = f'<div class="why"><b>Why it matters</b>{escape(why)}</div>' if why else ""
     return f"""<article class="card" data-theme="{escape(theme)}">
-  <div class="card-top"><span class="chip">{escape(theme)}</span>{signal_html(field(item, "relevance_score"))}</div>
+  <div class="card-top"><span class="chip">{escape(theme)}</span>{signal_html(field(item, "relevance_score"), high_threshold)}</div>
   <h3 class="card-title"><a href="{escape(url)}" target="_blank" rel="noopener">{escape(title)}</a></h3>
   <p class="card-meta"><span class="src">{escape(src)}</span><span class="sep">/</span><span>{escape(when)}</span></p>
   {body}
@@ -434,17 +458,28 @@ def render_card(item) -> str:
 </article>"""
 
 
-def signal_html(value) -> str:
+def signal_html(value, high_threshold: int = 80) -> str:
     n = signal_level(value)
+    num = score_int(value)
     bars = "".join(f'<i class="{"on" if i <= n else ""}"></i>' for i in range(1, 6))
-    return f'<span class="signal" title="Relevance {n}/5">{bars}</span>'
+    high = num is not None and num >= high_threshold
+    cls = "signal signal-high" if high else "signal"
+    label = f'<span class="signal-num">{num}</span>' if num is not None else ""
+    return f'<span class="{cls}" title="Score {num if num is not None else "?"}/100">{bars}{label}</span>'
 
 
 def signal_level(value) -> int:
     try:
-        return max(1, min(5, round(float(value))))
+        return max(1, min(5, round(float(value) / 20)))
     except (TypeError, ValueError):
         return 1
+
+
+def score_int(value):
+    try:
+        return int(round(float(value)))
+    except (TypeError, ValueError):
+        return None
 
 
 # ---------------------------------------------------------------------------

@@ -6,10 +6,11 @@ a polymer electrolyte, polymer membrane, or polymer composite).
 Return strict JSON only:
 
 ```json
-{"relevance": 1, "quality": 1, "reason": "...", "theme": "..."}
+{"relevance": 0, "quality": 0, "reason": "...", "theme": "..."}
 ```
 
-Scores are integers 1–5.
+Scores are integers on a **0–100** scale. Be discriminating — most items should land in the 30–70
+band; reserve **80+** for genuinely high-signal work. Do not inflate.
 
 ## In-scope categories
 Relevant work falls into one of these (this is also the `theme` taxonomy — use the exact label):
@@ -29,18 +30,20 @@ Relevant work falls into one of these (this is also the `theme` taxonomy — use
 7. **Informatics Platforms & Databases** — polymer databases (PoLyInfo, PI1M, Khazana) and informatics
    platforms (Citrine, Materia, Polymerize) that integrate AI with polymer data.
 
-## Relevance (1–5)
-- **5** — squarely AI/ML + clearly a polymer/soft-matter system, fits one category cleanly.
-- **4** — AI + polymer, but adjacent or lighter (e.g. a polymer composite where the polymer is one part).
-- **3** — borderline: materials-informatics method that is *applicable* to polymers but demonstrated on
-  non-polymer systems, OR a polymer paper with only thin AI content.
-- **1–2** — not a polymer (metals/alloys/concrete/ceramics/semiconductors/batteries with no polymer),
+## Relevance (0–100)
+- **85–100** — squarely AI/ML + clearly a polymer/soft-matter system, fits one category cleanly, and
+  is a real, notable development.
+- **70–84** — solid AI + polymer work, but adjacent or lighter (e.g. a composite where the polymer is
+  one component), or a strong method with modest novelty.
+- **40–69** — borderline: a materials-informatics method *applicable* to polymers but demonstrated on
+  non-polymer systems, or a polymer paper with only thin AI content.
+- **0–39** — not a polymer (metals/alloys/concrete/ceramics/semiconductors/batteries with no polymer),
   not really AI/ML, or marketing/opinion rather than a real development.
 
-## Quality (1–5)
+## Quality (0–100)
 Methodological rigor, novelty, dataset/benchmark strength, and venue. Penalize vague claims, pure
 review-of-reviews, and press-release tone.
 
 ## theme
-Set `theme` to exactly one label from the 7 categories above. If relevance ≤ 2 or it fits none, use
+Set `theme` to exactly one label from the 7 categories above. If relevance < 40 or it fits none, use
 `"Other"`.

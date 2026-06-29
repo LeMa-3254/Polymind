@@ -17,6 +17,7 @@ from pipeline.enrich import enrich_items
 from pipeline.ingest import ingest_enabled_sources
 from pipeline.score import score_item
 from pipeline.synth import last_complete_week_bounds, synthesize_week
+from sources.base import vocabulary_match
 from store.db import (
     connect,
     included_items_between,
@@ -37,7 +38,8 @@ def run_pipeline(
     config = load_config(config_path)
     token_usage: dict = {}
     items, errors = ingest_enabled_sources(config)
-    scored = [score_item(item, config, token_usage=token_usage) for item in items]
+    candidates = prefilter_candidates(items, config)
+    scored = [score_item(item, config, token_usage=token_usage) for item in candidates]
     embed_items(scored, config, token_usage=token_usage)
 
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
@@ -66,6 +68,7 @@ def run_pipeline(
             db,
             counts={
                 "fetched": len(items),
+                "candidates": len(candidates),
                 "scored": len(scored),
                 "included": len(enriched),
                 "duplicates": sum(1 for item in deduped if item.status == "dropped_dup"),
@@ -75,6 +78,22 @@ def run_pipeline(
             token_usage=token_usage,
         )
     return 0
+
+
+def prefilter_candidates(items: list[Item], config: dict) -> list[Item]:
+    """Drop items that miss the keyword gate, then keep the most promising N (polymer-first,
+    most recent) before any LLM scoring — fewer model calls, faster runs, tighter scope."""
+    gated = [item for item in items if vocabulary_match(item, config)]
+    boost_terms = [term.lower() for term in config.get("targeting", {}).get("polymer_boost_terms", [])]
+
+    def is_polymer(item: Item) -> bool:
+        text = f"{item.title} {item.abstract or ''}".lower()
+        return any(term in text for term in boost_terms)
+
+    gated.sort(key=lambda it: (it.published_date or it.fetched_date or ""), reverse=True)
+    gated.sort(key=lambda it: 0 if is_polymer(it) else 1)  # stable: polymer first, recency preserved
+    cap = int(config.get("scoring", {}).get("max_candidates", 0) or 0)
+    return gated[:cap] if cap else gated
 
 
 def item_from_row(row) -> Item:
