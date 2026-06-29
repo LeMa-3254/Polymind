@@ -75,6 +75,14 @@ def normalize_date(value: str | None) -> str | None:
         return None
 
 
+def first_real_date(*values: str | None) -> str | None:
+    for value in values:
+        parsed = normalize_date(value)
+        if parsed:
+            return parsed
+    return None
+
+
 def vocabulary_match(item: Item, config: dict[str, Any]) -> bool:
     targeting = config.get("targeting", {})
     text = f"{item.title} {item.abstract or ''}".lower()

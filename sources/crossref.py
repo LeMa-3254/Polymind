@@ -5,7 +5,7 @@ from typing import Any
 from urllib.parse import urlencode
 
 from models import Item
-from .base import SourceAdapter, SourceResult, clean_text, fetch_url, normalize_date, resolve_filter_placeholders
+from .base import SourceAdapter, SourceResult, clean_text, fetch_url, first_real_date, resolve_filter_placeholders
 
 
 class CrossrefAdapter(SourceAdapter):
@@ -38,7 +38,7 @@ def parse_crossref(payload: dict[str, Any], *, tier: str) -> list[Item]:
             " ".join(part for part in [author.get("given"), author.get("family")] if part)
             for author in work.get("author", [])
         ]
-        published = date_parts(work.get("published-print") or work.get("published-online") or work.get("created"))
+        published = crossref_source_date(work)
         if title and url:
             items.append(
                 Item.from_source(
@@ -67,4 +67,18 @@ def date_parts(value: dict[str, Any] | None) -> str | None:
     year = parts[0]
     month = parts[1] if len(parts) > 1 else 1
     day = parts[2] if len(parts) > 2 else 1
-    return normalize_date(f"{year:04d}-{month:02d}-{day:02d}")
+    return first_real_date(f"{year:04d}-{month:02d}-{day:02d}")
+
+
+def crossref_source_date(work: dict[str, Any]) -> str | None:
+    return first_real_date(
+        date_parts(work.get("published-print")),
+        date_parts(work.get("published-online")),
+        date_parts(work.get("published")),
+        date_parts(work.get("posted")),
+        date_parts(work.get("accepted")),
+        date_parts(work.get("approved")),
+        date_parts(work.get("created")),
+        date_parts(work.get("deposited")),
+        date_parts(work.get("indexed")),
+    )

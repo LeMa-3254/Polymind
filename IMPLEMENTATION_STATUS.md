@@ -60,9 +60,9 @@ deployment settings still need to be verified in GitHub.
   and SQLite commit-back.
 - Updated GitHub Actions pins to current Node 24-compatible action major versions after the first manual
   run reported a Node 20 deprecation warning.
-- Fixed first live-site data quality issues: future source publication dates now fall back to fetched
-  dates, all included items receive summary/why fallback text beyond the model enrichment cap, and raw
-  underscore theme identifiers render as readable labels.
+- Fixed first live-site data quality issues: future issue publication dates now fall back to real
+  non-future source metadata dates, all included items receive summary/why fallback text beyond the
+  model enrichment cap, and raw underscore theme identifiers render as readable labels.
 - Initialized the local git repository and pushed it to `LeMa-3254/Polymind`.
 
 ## Remaining

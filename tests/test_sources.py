@@ -2,9 +2,9 @@ import unittest
 
 from models import Item
 from sources.base import normalize_date, resolve_filter_placeholders, vocabulary_match
-from sources.crossref import date_parts
+from sources.crossref import crossref_source_date, date_parts
 from sources.journal_rss import parse_rss_or_atom
-from sources.openalex import reconstruct_abstract
+from sources.openalex import openalex_source_date, reconstruct_abstract
 
 
 CONFIG = {
@@ -73,6 +73,30 @@ class SourceTests(unittest.TestCase):
 
     def test_crossref_date_parts_rejects_future_dates(self):
         self.assertIsNone(date_parts({"date-parts": [[2035, 9, 5]]}))
+
+    def test_openalex_source_date_uses_record_date_when_publication_is_future(self):
+        self.assertEqual(
+            openalex_source_date(
+                {
+                    "publication_date": "2035-09-05",
+                    "created_date": "2026-06-20",
+                    "updated_date": "2026-06-21",
+                }
+            ),
+            "2026-06-20",
+        )
+
+    def test_crossref_source_date_uses_created_date_when_publication_is_future(self):
+        self.assertEqual(
+            crossref_source_date(
+                {
+                    "published-print": {"date-parts": [[2035, 9, 5]]},
+                    "published-online": {"date-parts": [[2026, 12, 31]]},
+                    "created": {"date-parts": [[2026, 6, 20]]},
+                }
+            ),
+            "2026-06-20",
+        )
 
 
 if __name__ == "__main__":
