@@ -101,11 +101,20 @@ def item_payload(item: Item) -> dict[str, Any]:
 
 
 def infer_theme(item: Item) -> str:
+    """Map to the fixed theme taxonomy (mirrors targeting.themes / the relevance rubric)."""
     text = f"{item.title} {item.abstract or ''}".lower()
-    if "self-driving" in text or "autonomous" in text:
-        return "autonomous labs"
-    if "generative" in text or "inverse design" in text:
-        return "generative design"
-    if "property" in text or "qspr" in text:
-        return "property prediction"
-    return "materials AI"
+    if any(term in text for term in ("polyinfo", "pi1m", "khazana", "citrine", "polymerize", "informatics platform", "database")):
+        return "Informatics Platforms & Databases"
+    if any(term in text for term in ("large language model", "llm", "foundation model", "literature mining")):
+        return "LLMs in Materials Science"
+    if any(term in text for term in ("recycl", "depolymeriz", "sustainab", "life cycle", "bio-based", "pfas")):
+        return "Recycling & Sustainability"
+    if any(term in text for term in ("injection molding", "extrusion", "compounding", "process control", "digital twin", "defect")):
+        return "Processing Optimization"
+    if any(term in text for term in ("ftir", "raman", "spectra", "spectral", "sem", "tem", "dsc", "dma", "microstructure", "characteriz")):
+        return "Characterization"
+    if any(term in text for term in ("generative", "inverse design", "diffusion model", "variational autoencoder", "gan")):
+        return "Generative & Inverse Design"
+    if any(term in text for term in ("property prediction", "qspr", "qsar", "mechanical", "thermal", "glass transition")):
+        return "Property Prediction"
+    return "Other"

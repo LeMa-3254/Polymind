@@ -10,8 +10,14 @@ have been fixed in code and in the committed SQLite archive.
 
 The local directory is initialized as a git repository and pushed to `LeMa-3254/Polymind`. The repo
 was made public so GitHub Pages can run on the current GitHub plan. Repository API secrets were added
-by the user. The next operational check is to rerun the GitHub Actions workflow after the latest data
-quality fixes and confirm the deployed Pages site reflects the corrected dates and fallback text.
+by the user.
+
+Two rounds of changes have since landed but have not yet been run through the pipeline or deployed:
+(1) a full static-site UI redesign with a ranked, polymer-first feed and a restructured weekly
+synthesis, and (2) a targeting refocus that narrows scope from general "AI + materials" to
+polymer-specific AI across seven defined categories. These are config/prompt/render changes only; they
+take effect on the next pipeline run. The current committed `data/tracker.db` and deployed site still
+reflect the old broad targeting until a run is executed.
 
 ## Completed
 
@@ -70,13 +76,39 @@ quality fixes and confirm the deployed Pages site reflects the corrected dates a
   model enrichment cap, and raw underscore theme identifiers render as readable labels.
 - Initialized the local git repository and pushed it to `LeMa-3254/Polymind`.
 
+### Site UI redesign
+- Rebuilt `site/build.py` on a single shared design system (light, scannable, aihot.virxact.com-style)
+  replacing the per-page duplicated styles and heavy boxed cards.
+- Added a sticky minimal header with pill nav, compact cards with a relevance "heat" badge, relative
+  dates, clamped summaries, an accented "why it matters" callout, and a theme tag.
+- Made the home feed curated and ranked: sorted by relevance then quality, split into a
+  polymer/soft-matter section first and a broader materials-AI section, capped (12 + 18); full history
+  moved to the Archive.
+- Restructured the weekly synthesis into "This week in brief" highlights plus "Trends by theme", with
+  markdown link/bold rendering, an improved `prompts/synth.md`, and a structured deterministic fallback.
+- Removed the RSS entry from the top nav (kept `feed.xml`, the footer link, and the alternate link).
+
+### Targeting refocus (polymer-specific, 7 categories)
+- Narrowed the `materials_terms` gate from generic materials vocabulary to polymer/soft-matter terms so
+  alloys, concrete, ceramics, semiconductors, and off-topic ML no longer pass on keywords alone.
+- Rewrote OpenAlex/Crossref searches and added one Google News query per target category.
+- Rewrote `prompts/relevance.md` to define Polymind as AI-for-polymers, enumerate the seven categories,
+  and score non-polymer materials work as low relevance.
+- Added a fixed `targeting.themes` taxonomy (the seven categories) and made the scoring model and the
+  bootstrap `infer_theme` map to it, replacing the prior free-text theme sentences.
+
 ## Remaining
 
-- Rerun the GitHub Actions workflow after the latest data-quality fixes and confirm the Pages deployment updates.
-- Review live Anthropic scoring/enrichment outputs and tune prompts/thresholds for precision.
+- Rerun the GitHub Actions workflow with the new targeting + UI and confirm the Pages deployment shows
+  polymer-focused content tagged with the seven fixed themes (not yet triggered, by request).
+- Review live scoring/enrichment outputs under the rewritten rubric; tune thresholds if the polymer
+  gate is too strict or too loose (re-filtering the old pool kept ~22 of 160 items).
 - Revisit disabled RSC/ACS journal RSS feeds or replace them with accessible source URLs.
 - Run Voyage embedding generation against live API credentials and verify duplicate behavior across repeated live runs.
-- Polish the static site templates and add more browse paths if the first live archive needs them.
+- Fix the weekly window: with corrected publication dates the current week holds only one item, so the
+  weekly synthesis is sparse — consider keying the window on fetched/digest date or a wider lookback
+  (`pipeline/run.py` `current_week_bounds` usage).
+- Regenerate the stored weekly synthesis after the window fix (the committed one predates these changes).
 - Add verification tests for adapters, gate behavior, CI dry-runs, and cost caps.
 
 ## Decisions Locked

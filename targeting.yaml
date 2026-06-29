@@ -66,59 +66,121 @@ targeting:
     - autonomous experimentation
     - self-driving laboratory
     - representation learning
-
-  materials_terms:
-    - materials discovery
-    - materials design
-    - materials informatics
-    - polymer
-    - macromolecule
-    - copolymer
-    - monomer
-    - polymerization
-    - soft matter
-    - elastomer
-    - thermoplastic
-    - thermoset
-    - composite
-    - formulation
-    - molecular design
-    - structure-property
-    - cheminformatics
+    - Gaussian process
+    - Gaussian process regression
     - QSPR
-    - force field
-    - molecular dynamics
-    - catalyst
-    - electrolyte
-    - membrane
+    - QSAR
+    - computer vision
+    - digital twin
 
-  polymer_boost_terms:        # +score; keeps focus on polymers/soft matter
+  # Domain gate is POLYMER-CENTRIC by design: a candidate must hit >=1 ai_term AND >=1 of these
+  # polymer/soft-matter terms. Generic "materials informatics / alloy / concrete / semiconductor"
+  # work no longer passes on keywords alone — the LLM rubric (prompts/relevance.md) is the fine filter.
+  materials_terms:
+    # core polymer chemistry
     - polymer
+    - polymeric
+    - polymers
     - macromolecule
     - copolymer
     - block copolymer
     - monomer
     - polymerization
+    - polyolefin
+    - polyethylene
+    - polypropylene
+    - polyamide
+    - polyimide
+    - polyester
+    - polyurethane
+    - epoxy
+    - elastomer
+    - rubber
+    - thermoplastic
+    - thermoset
+    - resin
+    - plastic
+    - plastics
+    - vitrimer
+    - hydrogel
+    - soft matter
+    - polymer composite
+    - polymer blend
+    - polymer nanocomposite
+    # category anchors: processing, recycling, characterization adjacency
+    - polymer membrane
+    - polymer electrolyte
+    - formulation
+    - injection molding
+    - extrusion
+    - compounding
+    - depolymerization
+    - plastic recycling
+    - PFAS
+    # polymer informatics platforms & databases (category 7)
+    - polymer informatics
+    - PoLyInfo
+    - PI1M
+    - Khazana
+    - RadonPy
+    - polyBERT
+    - Polymer Genome
+
+  polymer_boost_terms:        # +score; strongest polymer signals
+    - polymer
+    - polymeric
+    - macromolecule
+    - copolymer
+    - block copolymer
+    - monomer
+    - polymerization
+    - polyolefin
+    - polyurethane
+    - epoxy
     - elastomer
     - thermoplastic
     - thermoset
+    - resin
+    - vitrimer
+    - hydrogel
     - soft matter
     - rheology
     - glass transition
     - crosslink
+    - depolymerization
     - polymer informatics
     - PoLyInfo
+    - PI1M
+    - Khazana
     - RadonPy
 
-  exclude_terms:              # hard-drop obvious non-materials matches
+  exclude_terms:              # hard-drop clearly off-scope matches (kept conservative)
     - clinical trial
     - medical diagnosis
     - genomics
     - protein folding
+    - drug discovery
     - recommender system
     - sentiment analysis
     - self-driving car
+    - autonomous driving
     - stock market
+    - lattice gauge theory
+    - gauge theory
+    - crop yield
+    - remote sensing
+    - superalloy
+
+  # Fixed theme taxonomy — the scoring model MUST tag each kept item with exactly one of these
+  # labels (or "Other"). Keeps feed/archive themes consistent instead of free-text sentences.
+  themes:
+    - Property Prediction
+    - Generative & Inverse Design
+    - Characterization
+    - Processing Optimization
+    - Recycling & Sustainability
+    - LLMs in Materials Science
+    - Informatics Platforms & Databases
 
 # ----------------------------------------------------------------------------
 # SOURCES — Tier A (curated firehoses): poll, take all new, then filter
@@ -146,7 +208,7 @@ sources:
     # OpenAlex `search` covers title+abstract+fulltext. Combine with a date
     # filter. Add topic/concept IDs once you've looked them up for tighter
     # recall (find them at https://api.openalex.org/topics?search=polymer ).
-    search: "(machine learning OR deep learning OR generative) AND (polymer OR materials)"
+    search: "(machine learning OR deep learning OR neural network OR generative OR language model OR inverse design OR Bayesian optimization) AND (polymer OR macromolecule OR copolymer OR elastomer OR thermoplastic OR thermoset OR plastic OR polyurethane OR epoxy OR hydrogel OR polymer informatics)"
     filters:
       from_publication_date: "{lookback_date}"   # adapter fills from lookback_hours
     # optional, fill after lookup:
@@ -158,7 +220,7 @@ sources:
     enabled: true
     tier: A
     api_base: "https://api.crossref.org/works"
-    query: "machine learning polymer materials design"
+    query: "machine learning polymer property prediction inverse design characterization recycling informatics"
     filters:
       from-pub-date: "{lookback_date}"
       type: "journal-article"
@@ -215,12 +277,14 @@ sources:
     enabled: false     # Phase 3; disabled for MVP
     tier: C
     rss_template: "https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
-    queries:
-      - "AI polymer materials discovery"
-      - "machine learning polymer design"
-      - "generative model materials inverse design"
-      - "foundation model materials science"
-      - "self-driving laboratory polymers"
+    queries:                                  # one per target category
+      - "machine learning polymer property prediction"
+      - "generative AI polymer inverse design"
+      - "AI polymer characterization spectroscopy microscopy"
+      - "machine learning injection molding extrusion polymer process"
+      - "AI plastic recycling depolymerization sustainability"
+      - "large language model materials science polymer"
+      - "polymer informatics database PolyInfo Citrine Polymerize"
 
   # -- Tier D: social (build last) --
   social:
