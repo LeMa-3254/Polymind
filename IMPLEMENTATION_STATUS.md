@@ -7,8 +7,9 @@ foundations, pipeline stubs, SQLite storage, prompt files, a minimal static rend
 GitHub Actions workflow scaffold, and offline tests. The live model/API integrations, Voyage embedding
 generation, and verified GitHub Pages deployment are still remaining.
 
-The current directory is not yet a git repository, so workflow execution, commit-back behavior,
-repository secrets, and GitHub Pages deployment settings cannot be finalized until a repo remote exists.
+The local directory has been initialized as a git repository and is being connected to the existing
+GitHub repo `LeMa-3254/polymind`. Workflow execution, commit-back behavior, repository secrets, and
+GitHub Pages deployment settings still need to be verified after the first push.
 
 ## Completed
 
@@ -21,7 +22,7 @@ repository secrets, and GitHub Pages deployment settings cannot be finalized unt
 - Selected `dedup.on_duplicate: "drop"` as the v1 duplicate policy.
 - Added config-driven model keys for scoring, enrichment, and weekly synthesis.
 - Set `meta.contact_email` for OpenAlex/Crossref polite-pool access.
-- Set the initial GitHub Pages URL to `https://polymind.github.io/`.
+- Set the initial GitHub Pages project URL to `https://lema-3254.github.io/polymind/`.
 - Added Python project metadata and dependency declarations in `pyproject.toml` and `requirements.txt`.
 - Scaffolded the planned `sources/`, `pipeline/`, `store/`, `site/`, `prompts/`, and `tests/` structure.
 - Added normalized `Item` modeling and stable item ID generation.
@@ -45,8 +46,8 @@ repository secrets, and GitHub Pages deployment settings cannot be finalized unt
 ## Remaining
 
 - Replace bootstrap scoring/enrichment stubs with Anthropic model calls using the configured models and prompts.
-- Initialize or connect the local directory to the GitHub repository/remote.
-- Verify the GitHub Actions workflow on `workflow_dispatch` after the repository exists.
+- Push the local commits to the existing GitHub repository.
+- Verify the GitHub Actions workflow on `workflow_dispatch` after the first push.
 - Configure repository secrets and GitHub Pages settings.
 - Verify live arXiv, OpenAlex, Crossref, and journal RSS fetching against real responses.
 - Implement structured JSON parsing and retry/error handling for model responses.
@@ -70,5 +71,4 @@ repository secrets, and GitHub Pages deployment settings cannot be finalized unt
 ## Open Questions
 
 - Which custom domain, if any, should be configured after GitHub Pages is live?
-- Should the final GitHub Pages deployment use the user/org site URL `https://polymind.github.io/` or a project URL once the repo remote exists?
 - How will Anthropic ZDR be verified for the account/API configuration before production runs?

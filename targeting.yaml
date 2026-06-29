@@ -25,7 +25,7 @@ site:
   description: >-
     A daily feed plus weekly synthesis of the latest AI tools and methods for
     polymer and materials development — fresh, sourced, and curated.
-  url: "https://polymind.github.io/"   # confirm after repo/Pages setup; custom domain later
+  url: "https://lema-3254.github.io/polymind/"   # GitHub Pages project URL; custom domain later
 
 # ----------------------------------------------------------------------------
 # TARGETING VOCABULARY  — the cross-product that defines "polymer + AI"
