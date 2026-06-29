@@ -7,9 +7,9 @@ foundations, pipeline stubs, SQLite storage, prompt files, a minimal static rend
 GitHub Actions workflow scaffold, and offline tests. The live model/API integrations, Voyage embedding
 generation, and verified GitHub Pages deployment are still remaining.
 
-The local directory has been initialized as a git repository and is being connected to the existing
-GitHub repo `LeMa-3254/polymind`. Workflow execution, commit-back behavior, repository secrets, and
-GitHub Pages deployment settings still need to be verified after the first push.
+The local directory has been initialized as a git repository and pushed to the existing GitHub repo
+`LeMa-3254/Polymind`. Workflow execution, commit-back behavior, repository secrets, and GitHub Pages
+deployment settings still need to be verified in GitHub.
 
 ## Completed
 
@@ -22,7 +22,7 @@ GitHub Pages deployment settings still need to be verified after the first push.
 - Selected `dedup.on_duplicate: "drop"` as the v1 duplicate policy.
 - Added config-driven model keys for scoring, enrichment, and weekly synthesis.
 - Set `meta.contact_email` for OpenAlex/Crossref polite-pool access.
-- Set the initial GitHub Pages project URL to `https://lema-3254.github.io/polymind/`.
+- Set the initial GitHub Pages project URL to `https://lema-3254.github.io/Polymind/`.
 - Added Python project metadata and dependency declarations in `pyproject.toml` and `requirements.txt`.
 - Scaffolded the planned `sources/`, `pipeline/`, `store/`, `site/`, `prompts/`, and `tests/` structure.
 - Added normalized `Item` modeling and stable item ID generation.
@@ -42,12 +42,12 @@ GitHub Pages deployment settings still need to be verified after the first push.
 - Added `Makefile` targets for tests, pipeline runs, static site builds, and cleanup.
 - Added initial `.github/workflows/daily.yml` for tests, daily pipeline runs, site build, Pages deploy,
   and SQLite commit-back.
+- Initialized the local git repository and pushed it to `LeMa-3254/Polymind`.
 
 ## Remaining
 
 - Replace bootstrap scoring/enrichment stubs with Anthropic model calls using the configured models and prompts.
-- Push the local commits to the existing GitHub repository.
-- Verify the GitHub Actions workflow on `workflow_dispatch` after the first push.
+- Verify the GitHub Actions workflow on `workflow_dispatch` after configuring repository secrets.
 - Configure repository secrets and GitHub Pages settings.
 - Verify live arXiv, OpenAlex, Crossref, and journal RSS fetching against real responses.
 - Implement structured JSON parsing and retry/error handling for model responses.

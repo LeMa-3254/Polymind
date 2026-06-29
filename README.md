@@ -45,7 +45,7 @@ The initial launch target is GitHub Pages. After the repository exists on GitHub
 
 1. Add repository secrets: `ANTHROPIC_API_KEY` and `VOYAGE_API_KEY`.
 2. Enable Pages from GitHub Actions in repository settings.
-3. Confirm Pages serves the project URL: `https://lema-3254.github.io/polymind/`.
+3. Confirm Pages serves the project URL: `https://lema-3254.github.io/Polymind/`.
 4. Update `targeting.yaml` if a custom domain replaces the Pages URL.
 
 The current workflow is an initial scaffold. It runs tests, runs the pipeline, builds static output,
