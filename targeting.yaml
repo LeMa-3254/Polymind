@@ -1,0 +1,265 @@
+# ============================================================================
+# polymer-ai-tracker — targeting.yaml
+# ----------------------------------------------------------------------------
+# Single source of truth for WHAT to look for and WHERE to look.
+# Every source adapter reads this; the relevance/quality gate reads the
+# vocabulary + scoring blocks. Tune precision vs. recall here, not in code.
+#
+# One thing to fill in before first run:
+#   1. Verify each feed URL under sources.* on first run (feeds drift; the
+#      adapter should log any that 404 so you can prune them). Lines marked
+#      `# verify` are best-effort patterns most likely to need a check.
+# ============================================================================
+
+meta:
+  lookback_hours: 48          # freshness window: only items newer than this
+  timezone: America/Los_Angeles
+  contact_email: "tengteng3254@gmail.com"
+
+# ----------------------------------------------------------------------------
+# SITE IDENTITY — strings used in the header, <title>/meta tags, and RSS feed
+# ----------------------------------------------------------------------------
+site:
+  name: "Polymind"
+  tagline: "AI tools for polymer & materials development"
+  description: >-
+    A daily feed plus weekly synthesis of the latest AI tools and methods for
+    polymer and materials development — fresh, sourced, and curated.
+  url: "https://polymind.github.io/"   # confirm after repo/Pages setup; custom domain later
+
+# ----------------------------------------------------------------------------
+# TARGETING VOCABULARY  — the cross-product that defines "polymer + AI"
+# Match rule (applied by adapters that support keyword filtering, e.g. arXiv,
+# Google News): an item is a CANDIDATE if it hits >=1 ai_term AND >=1
+# materials_term. polymer_boost_terms raise the relevance score later.
+# exclude_terms hard-drop obvious off-topic matches before they reach the LLM.
+# Keep excludes conservative — the gate is the real filter; this just saves
+# tokens on clear noise.
+# ----------------------------------------------------------------------------
+targeting:
+  ai_terms:
+    - machine learning
+    - deep learning
+    - neural network
+    - graph neural network
+    - GNN
+    - message passing
+    - equivariant
+    - transformer
+    - large language model
+    - LLM
+    - foundation model
+    - generative model
+    - diffusion model
+    - variational autoencoder
+    - generative adversarial
+    - reinforcement learning
+    - active learning
+    - Bayesian optimization
+    - surrogate model
+    - machine learning potential
+    - interatomic potential
+    - neural network potential
+    - inverse design
+    - property prediction
+    - high-throughput screening
+    - autonomous experimentation
+    - self-driving laboratory
+    - representation learning
+
+  materials_terms:
+    - materials discovery
+    - materials design
+    - materials informatics
+    - polymer
+    - macromolecule
+    - copolymer
+    - monomer
+    - polymerization
+    - soft matter
+    - elastomer
+    - thermoplastic
+    - thermoset
+    - composite
+    - formulation
+    - molecular design
+    - structure-property
+    - cheminformatics
+    - QSPR
+    - force field
+    - molecular dynamics
+    - catalyst
+    - electrolyte
+    - membrane
+
+  polymer_boost_terms:        # +score; keeps focus on polymers/soft matter
+    - polymer
+    - macromolecule
+    - copolymer
+    - block copolymer
+    - monomer
+    - polymerization
+    - elastomer
+    - thermoplastic
+    - thermoset
+    - soft matter
+    - rheology
+    - glass transition
+    - crosslink
+    - polymer informatics
+    - PoLyInfo
+    - RadonPy
+
+  exclude_terms:              # hard-drop obvious non-materials matches
+    - clinical trial
+    - medical diagnosis
+    - genomics
+    - protein folding
+    - recommender system
+    - sentiment analysis
+    - self-driving car
+    - stock market
+
+# ----------------------------------------------------------------------------
+# SOURCES — Tier A (curated firehoses): poll, take all new, then filter
+# ----------------------------------------------------------------------------
+sources:
+
+  arxiv:
+    enabled: true
+    tier: A
+    api_base: "http://export.arxiv.org/api/query"   # stable; RSS alt: https://rss.arxiv.org/rss/<cat>
+    categories:
+      - cond-mat.soft        # soft condensed matter (polymers, soft matter)
+      - cond-mat.mtrl-sci    # materials science
+      - physics.chem-ph      # chemical physics
+      - cs.LG                # machine learning
+      - cs.CE                # computational engineering
+    # logic: pull new submissions in each category, keep those whose
+    # title/abstract satisfy the targeting match rule above.
+    filter_with_vocabulary: true
+
+  openalex:
+    enabled: true
+    tier: A
+    api_base: "https://api.openalex.org/works"
+    # OpenAlex `search` covers title+abstract+fulltext. Combine with a date
+    # filter. Add topic/concept IDs once you've looked them up for tighter
+    # recall (find them at https://api.openalex.org/topics?search=polymer ).
+    search: "(machine learning OR deep learning OR generative) AND (polymer OR materials)"
+    filters:
+      from_publication_date: "{lookback_date}"   # adapter fills from lookback_hours
+    # optional, fill after lookup:
+    # topic_ids: ["T...", "T..."]      # e.g. polymer science, materials informatics
+    per_page: 200
+    mailto_from_meta: true
+
+  crossref:
+    enabled: true
+    tier: A
+    api_base: "https://api.crossref.org/works"
+    query: "machine learning polymer materials design"
+    filters:
+      from-pub-date: "{lookback_date}"
+      type: "journal-article"
+    rows: 100
+
+  journal_rss:               # venue = quality filter; take all, light-filter
+    enabled: true
+    tier: A
+    feeds:
+      - name: "npj Computational Materials"
+        url: "https://www.nature.com/npjcompumats.rss"
+      - name: "Nature Computational Science"
+        url: "https://www.nature.com/natcomputsci.rss"
+      - name: "Nature Materials"
+        url: "https://www.nature.com/nmat.rss"
+      - name: "Digital Discovery (RSC)"
+        url: "https://pubs.rsc.org/en/Journals/getrssfeed?journalcode=DD"   # verify
+      - name: "Macromolecules (ACS)"
+        url: "https://pubs.acs.org/action/showFeed?type=etoc&feed=rss&jc=mamobx"
+      - name: "Chemistry of Materials (ACS)"
+        url: "https://pubs.acs.org/action/showFeed?type=etoc&feed=rss&jc=cmatex"
+      - name: "J. Chem. Inf. Model. (ACS)"
+        url: "https://pubs.acs.org/action/showFeed?type=etoc&feed=rss&jc=jcisd8"
+      - name: "Matter (Cell Press)"
+        url: "https://www.cell.com/matter/current.rss"                       # verify
+      - name: "Science Advances"
+        url: "https://www.science.org/action/showFeed?type=etoc&feed=rss&jc=sciadv"  # verify
+
+  # -- Tier B: labs & research orgs --
+  org_blogs:
+    enabled: false     # Phase 3; disabled for MVP
+    tier: B
+    feeds:
+      - name: "Hugging Face Papers"        # replaces Papers with Code (retired Jul 2025)
+        url: "https://huggingface.co/papers"          # adapter scrapes/【API】; verify
+      - name: "Google DeepMind Blog"
+        url: "https://deepmind.google/blog/rss.xml"    # verify
+      - name: "Microsoft Research Blog"
+        url: "https://www.microsoft.com/en-us/research/feed/"
+      - name: "Meta AI Blog"
+        url: "https://ai.meta.com/blog/rss/"           # verify
+      - name: "Google Research Blog"
+        url: "https://research.google/blog/rss/"       # verify
+    # Add materials-AI companies as they publish: Citrine, Schrödinger,
+    # Orbital Materials, Radical AI, etc.
+
+  # -- Tier C: open web / news (query mode — noisy, leans on the gate) --
+  google_news:
+    enabled: false     # Phase 3; disabled for MVP
+    tier: C
+    rss_template: "https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
+    queries:
+      - "AI polymer materials discovery"
+      - "machine learning polymer design"
+      - "generative model materials inverse design"
+      - "foundation model materials science"
+      - "self-driving laboratory polymers"
+
+  # -- Tier D: social (build last) --
+  social:
+    enabled: false
+    x:
+      mode: "curated_list"          # ~30 high-signal accounts, third-party read API
+      read_api: "twitterapi.io"     # official X reads are pay-per-use, no free tier
+    linkedin:
+      mode: "manual_paste"          # no usable read API
+
+# ----------------------------------------------------------------------------
+# SCORING GATE — Claude relevance + quality scoring
+# ----------------------------------------------------------------------------
+scoring:
+  model: "claude-haiku-4-5-20251001"   # cheap, high-volume scoring
+  rubric_prompt: "prompts/relevance.md"
+  min_score: 3                          # keep items scoring >= this (1–5)
+  polymer_boost: 1                      # +score if polymer_boost_terms hit
+  source_tier_prior:                    # added to raw score before threshold
+    A: 1.0
+    B: 0.5
+    C: 0.0
+    D: -0.5
+
+# ----------------------------------------------------------------------------
+# ENRICHMENT — concise item summaries after scoring + dedup
+# ----------------------------------------------------------------------------
+enrich:
+  model: "claude-sonnet-4-5-20250929"   # stronger tier for user-facing summaries
+  prompt: "prompts/enrich.md"
+  max_items_per_run: 40                  # cost cap; overflow rolls to later runs
+
+# ----------------------------------------------------------------------------
+# WEEKLY SYNTHESIS — trend narrative over the week's included items
+# ----------------------------------------------------------------------------
+synth:
+  model: "claude-sonnet-4-5-20250929"   # stronger tier for weekly synthesis
+  prompt: "prompts/synth.md"
+
+# ----------------------------------------------------------------------------
+# DEDUP / NOVELTY — the "don't repeat" layer
+# ----------------------------------------------------------------------------
+dedup:
+  embedding_model: "voyage-3"           # or local: sentence-transformers/bge-small-en-v1.5
+  similarity_threshold: 0.85            # >= this vs. 30-day memory => duplicate
+  window_days: 30                       # rolling memory horizon
+  on_duplicate: "drop"                  # or "tag_as_update"

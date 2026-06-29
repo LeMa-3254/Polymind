@@ -1,0 +1,96 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
+from html import unescape
+import re
+from typing import Any
+from urllib.error import URLError
+from urllib.request import Request, urlopen
+
+from models import Item
+
+
+class SourceError(RuntimeError):
+    pass
+
+
+@dataclass(slots=True)
+class SourceResult:
+    items: list[Item]
+    errors: list[str]
+
+
+class SourceAdapter:
+    source_type = "unknown"
+
+    def __init__(self, config: dict[str, Any], source_config: dict[str, Any]) -> None:
+        self.config = config
+        self.source_config = source_config
+        self.tier = source_config.get("tier", "C")
+
+    def fetch(self) -> SourceResult:
+        raise NotImplementedError
+
+
+def fetch_url(url: str, *, headers: dict[str, str] | None = None, timeout: int = 30) -> bytes:
+    request = Request(url, headers=headers or {"User-Agent": "Polymind/0.1"})
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            return response.read()
+    except URLError as exc:
+        raise SourceError(str(exc)) from exc
+
+
+def clean_text(value: str | None) -> str:
+    if not value:
+        return ""
+    without_tags = re.sub(r"<[^>]+>", " ", value)
+    return re.sub(r"\s+", " ", unescape(without_tags)).strip()
+
+
+def normalize_date(value: str | None) -> str | None:
+    if not value:
+        return None
+    value = value.strip()
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).date().isoformat()
+    except ValueError:
+        pass
+    try:
+        return parsedate_to_datetime(value).date().isoformat()
+    except (TypeError, ValueError, IndexError):
+        return None
+
+
+def vocabulary_match(item: Item, config: dict[str, Any]) -> bool:
+    targeting = config.get("targeting", {})
+    text = f"{item.title} {item.abstract or ''}".lower()
+    excludes = [term.lower() for term in targeting.get("exclude_terms", [])]
+    if any(term in text for term in excludes):
+        return False
+
+    ai_terms = [term.lower() for term in targeting.get("ai_terms", [])]
+    materials_terms = [term.lower() for term in targeting.get("materials_terms", [])]
+    return any(term in text for term in ai_terms) and any(term in text for term in materials_terms)
+
+
+def utc_today() -> str:
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+def lookback_date(config: dict[str, Any]) -> str:
+    hours = int(config.get("meta", {}).get("lookback_hours", 48))
+    return (datetime.now(timezone.utc) - timedelta(hours=hours)).date().isoformat()
+
+
+def resolve_filter_placeholders(filters: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
+    resolved: dict[str, Any] = {}
+    replacements = {"{lookback_date}": lookback_date(config)}
+    for key, value in filters.items():
+        if isinstance(value, str):
+            for placeholder, replacement in replacements.items():
+                value = value.replace(placeholder, replacement)
+        resolved[key] = value
+    return resolved

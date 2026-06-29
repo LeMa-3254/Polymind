@@ -1,0 +1,97 @@
+from __future__ import annotations
+
+from pathlib import Path
+from datetime import datetime, timedelta, timezone
+import json
+import sqlite3
+from typing import Any
+
+from models import Item
+
+SCHEMA_PATH = Path(__file__).with_name("schema.sql")
+
+
+def connect(path: str | Path) -> sqlite3.Connection:
+    db = sqlite3.connect(path)
+    db.row_factory = sqlite3.Row
+    return db
+
+
+def init_db(db: sqlite3.Connection) -> None:
+    db.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
+    db.commit()
+
+
+def upsert_items(db: sqlite3.Connection, items: list[Item]) -> None:
+    rows = [item.to_db_row() for item in items]
+    if not rows:
+        return
+    columns = list(rows[0].keys())
+    placeholders = ", ".join(":" + column for column in columns)
+    updates = ", ".join(f"{column}=excluded.{column}" for column in columns if column != "id")
+    db.executemany(
+        f"""
+        INSERT INTO items ({", ".join(columns)})
+        VALUES ({placeholders})
+        ON CONFLICT(id) DO UPDATE SET {updates}
+        """,
+        rows,
+    )
+    db.commit()
+
+
+def log_run(
+    db: sqlite3.Connection,
+    *,
+    counts: dict[str, Any],
+    errors: list[str] | None = None,
+    token_usage: dict[str, Any] | None = None,
+) -> None:
+    db.execute(
+        """
+        INSERT INTO runs (counts_json, errors_json, token_usage_json)
+        VALUES (?, ?, ?)
+        """,
+        (
+            json.dumps(counts, sort_keys=True),
+            json.dumps(errors or [], sort_keys=True),
+            json.dumps(token_usage or {}, sort_keys=True),
+        ),
+    )
+    db.commit()
+
+
+def included_items(db: sqlite3.Connection) -> list[sqlite3.Row]:
+    return list(
+        db.execute(
+            """
+            SELECT *
+            FROM items
+            WHERE status = 'included'
+            ORDER BY COALESCE(published_date, fetched_date) DESC, title ASC
+            """
+        )
+    )
+
+
+def recent_embedding_memory(db: sqlite3.Connection, *, window_days: int) -> list[dict[str, Any]]:
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=window_days)).date().isoformat()
+    rows = db.execute(
+        """
+        SELECT id, embedding
+        FROM items
+        WHERE status = 'included'
+          AND embedding IS NOT NULL
+          AND COALESCE(published_date, fetched_date) >= ?
+        """,
+        (cutoff,),
+    )
+    memory: list[dict[str, Any]] = []
+    for row in rows:
+        try:
+            embedding = json.loads(row["embedding"])
+        except (TypeError, json.JSONDecodeError):
+            continue
+        if isinstance(embedding, list):
+            memory.append({"id": row["id"], "embedding": embedding})
+    return memory
