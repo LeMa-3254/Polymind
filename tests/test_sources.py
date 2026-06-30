@@ -1,10 +1,13 @@
 import unittest
 
 from models import Item
+import sources.google_news as google_news
 from sources.base import normalize_date, resolve_filter_placeholders, vocabulary_match
 from sources.crossref import crossref_source_date, date_parts
+from sources.google_news import GoogleNewsAdapter
 from sources.journal_rss import parse_rss_or_atom
 from sources.openalex import openalex_source_date, reconstruct_abstract
+from sources.rss_feeds import UniversityNewsAdapter
 
 
 CONFIG = {
@@ -53,6 +56,91 @@ class SourceTests(unittest.TestCase):
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0].source_name, "Example Journal")
         self.assertEqual(items[0].published_date, "2026-06-29")
+
+    def test_parse_rss_tags_caller_source_type(self):
+        payload = b"""<?xml version="1.0"?>
+        <rss version="2.0"><channel><item>
+          <title>Machine learning polymer discovery</title>
+          <link>https://example.test/uni-item</link>
+          <description>University press release.</description>
+        </item></channel></rss>"""
+
+        items = parse_rss_or_atom(
+            payload, source_name="MIT News", tier="C", source_type="university_news"
+        )
+
+        self.assertEqual(items[0].source_type, "university_news")
+
+    def test_feed_list_adapter_gates_by_vocabulary(self):
+        on_topic = b"""<?xml version="1.0"?>
+        <rss version="2.0"><channel><item>
+          <title>Machine learning for polymer design</title>
+          <link>https://example.test/on</link>
+          <description>Materials informatics study.</description>
+        </item></channel></rss>"""
+        off_topic = b"""<?xml version="1.0"?>
+        <rss version="2.0"><channel><item>
+          <title>Campus wins football championship</title>
+          <link>https://example.test/off</link>
+          <description>Sports news.</description>
+        </item></channel></rss>"""
+        fetched: list[str] = []
+
+        def fake_fetch(url, **kwargs):
+            fetched.append(url)
+            return on_topic if url.endswith("/on.rss") else off_topic
+
+        adapter = UniversityNewsAdapter(
+            CONFIG,
+            {
+                "tier": "C",
+                "feeds": [
+                    {"name": "On", "url": "https://example.test/on.rss"},
+                    {"name": "Off", "url": "https://example.test/off.rss"},
+                ],
+            },
+        )
+        import sources.rss_feeds as rss_feeds
+
+        original = rss_feeds.fetch_url
+        rss_feeds.fetch_url = fake_fetch
+        try:
+            result = adapter.fetch()
+        finally:
+            rss_feeds.fetch_url = original
+
+        self.assertEqual(len(fetched), 2)
+        self.assertEqual([item.title for item in result.items], ["Machine learning for polymer design"])
+        self.assertEqual(result.items[0].source_type, "university_news")
+
+    def test_google_news_encodes_queries_and_gates(self):
+        payload = b"""<?xml version="1.0"?>
+        <rss version="2.0"><channel><item>
+          <title>New machine learning model designs recyclable polymer</title>
+          <link>https://news.google.test/article</link>
+          <description>Coverage of an AI polymer result.</description>
+        </item></channel></rss>"""
+        urls: list[str] = []
+
+        def fake_fetch(url, **kwargs):
+            urls.append(url)
+            return payload
+
+        adapter = GoogleNewsAdapter(
+            CONFIG,
+            {"tier": "C", "queries": ["machine learning polymer property prediction"]},
+        )
+        original = google_news.fetch_url
+        google_news.fetch_url = fake_fetch
+        try:
+            result = adapter.fetch()
+        finally:
+            google_news.fetch_url = original
+
+        self.assertEqual(len(urls), 1)
+        self.assertIn("q=machine+learning+polymer+property+prediction", urls[0])
+        self.assertEqual(result.items[0].source_type, "google_news")
+        self.assertEqual(result.items[0].source_name, "Google News")
 
     def test_reconstruct_openalex_abstract(self):
         self.assertEqual(

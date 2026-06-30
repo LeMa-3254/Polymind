@@ -3,7 +3,16 @@ from __future__ import annotations
 from typing import Any
 
 from models import Item
-from sources import ArxivAdapter, CrossrefAdapter, JournalRssAdapter, OpenAlexAdapter
+from sources import (
+    ArxivAdapter,
+    CrossrefAdapter,
+    GoogleNewsAdapter,
+    JournalRssAdapter,
+    OpenAlexAdapter,
+    OrgBlogsAdapter,
+    UniversityNewsAdapter,
+    WebNewsAdapter,
+)
 
 
 ADAPTERS = {
@@ -11,6 +20,10 @@ ADAPTERS = {
     "openalex": OpenAlexAdapter,
     "crossref": CrossrefAdapter,
     "journal_rss": JournalRssAdapter,
+    "university_news": UniversityNewsAdapter,
+    "web_news": WebNewsAdapter,
+    "org_blogs": OrgBlogsAdapter,
+    "google_news": GoogleNewsAdapter,
 }
 
 

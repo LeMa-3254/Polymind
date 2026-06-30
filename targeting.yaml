@@ -253,27 +253,57 @@ sources:
         url: "https://pubs.acs.org/action/showFeed?type=etoc&feed=rss&jc=jcisd8"
         reason: "ACS RSS returns HTTP 403 in live smoke tests."
 
-  # -- Tier B: labs & research orgs --
+  # -- Tier B: labs & research orgs (RSS blogs; vocabulary-gated like journal_rss) --
   org_blogs:
-    enabled: false     # Phase 3; disabled for MVP
+    enabled: true
     tier: B
     feeds:
-      - name: "Hugging Face Papers"        # replaces Papers with Code (retired Jul 2025)
-        url: "https://huggingface.co/papers"          # adapter scrapes/【API】; verify
       - name: "Google DeepMind Blog"
-        url: "https://deepmind.google/blog/rss.xml"    # verify
+        url: "https://deepmind.google/blog/rss.xml"
       - name: "Microsoft Research Blog"
         url: "https://www.microsoft.com/en-us/research/feed/"
-      - name: "Meta AI Blog"
-        url: "https://ai.meta.com/blog/rss/"           # verify
       - name: "Google Research Blog"
-        url: "https://research.google/blog/rss/"       # verify
+        url: "https://research.google/blog/rss/"
+      - name: "Berkeley Lab (LBNL) News"
+        url: "https://newscenter.lbl.gov/feed/"
     # Add materials-AI companies as they publish: Citrine, Schrödinger,
     # Orbital Materials, Radical AI, etc.
 
+  # -- Tier C: university press rooms (broad — leans hard on the vocabulary gate) --
+  university_news:
+    enabled: true
+    tier: C
+    feeds:
+      - name: "MIT News"
+        url: "https://news.mit.edu/rss/feed"
+      - name: "MIT News — Materials Science & Engineering"
+        url: "https://news.mit.edu/rss/topic/materials-science-and-engineering"
+      - name: "Stanford News"
+        url: "https://news.stanford.edu/feed/"
+      - name: "UC Berkeley News"
+        url: "https://news.berkeley.edu/feed/"
+      - name: "Georgia Tech Research News"
+        url: "https://research.gatech.edu/rss.xml"
+      - name: "NIST News"
+        url: "https://www.nist.gov/news-events/news/rss.xml"
+
+  # -- Tier C: general science/tech web news (topic feeds; vocabulary-gated) --
+  web_news:
+    enabled: true
+    tier: C
+    feeds:
+      - name: "ScienceDaily — Materials Science"
+        url: "https://www.sciencedaily.com/rss/matter_energy/materials_science.xml"
+      - name: "ScienceDaily — Artificial Intelligence"
+        url: "https://www.sciencedaily.com/rss/computers_math/artificial_intelligence.xml"
+      - name: "Phys.org — Polymers"
+        url: "https://phys.org/rss-feed/chemistry-news/polymers/"
+      - name: "Phys.org — Materials Science"
+        url: "https://phys.org/rss-feed/chemistry-news/materials-science/"
+
   # -- Tier C: open web / news (query mode — noisy, leans on the gate) --
   google_news:
-    enabled: false     # Phase 3; disabled for MVP
+    enabled: true
     tier: C
     rss_template: "https://news.google.com/rss/search?q={query}&hl=en-US&gl=US&ceid=US:en"
     queries:                                  # one per target category
@@ -302,8 +332,11 @@ scoring:
   rubric_prompt: "prompts/relevance.md"
   scale: 100                            # scores are 0–100
   max_candidates: 80                    # cap items sent to the model per run (speed + cost)
-  min_score: 70                         # keep items scoring >= this; tune to land ~20 quality/week
-  high_quality_score: 80                # >= this is "high signal", featured separately on the site
+  min_score: 70                         # keep items (by relevance) >= this; tune to land ~20 quality/week
+  # "High signal" featured section requires BOTH bars: relevance >= high_relevance_score AND
+  # quality >= high_quality_score. The per-card score badge highlights on relevance >= high_relevance_score.
+  high_relevance_score: 80
+  high_quality_score: 80
   # Note: tier/polymer priors are NOT added to model scores (the rubric already judges polymer fit);
   # they only shape the keyword bootstrap fallback when no model is available.
 

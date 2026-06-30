@@ -107,6 +107,21 @@ reflect the old broad targeting until a run is executed.
 - Narrowed arXiv to cond-mat.soft / cond-mat.mtrl-sci / physics.chem-ph (dropped the cs.LG/cs.CE
   firehoses); lowered the enrichment cap to 25.
 
+### Open-web source expansion
+- Added adapters and enabled four previously-deferred open-web source tiers, all routed through the
+  same targeting vocabulary gate so off-topic stories never reach the LLM:
+  - `google_news` (query mode): the seven per-category Google News RSS searches now fetch live
+    (~65 gated items in a smoke run).
+  - `university_news`: MIT News + MIT Materials topic, Stanford, UC Berkeley, Georgia Tech, NIST.
+  - `web_news`: ScienceDaily (Materials Science, AI) and Phys.org (Polymers, Materials Science).
+  - `org_blogs`: Google DeepMind, Microsoft Research, Google Research, Berkeley Lab.
+- Generalized the RSS/Atom parsing into `sources/rss_feeds.py` with a shared `FeedListAdapter`
+  (parameterized by `source_type`); `JournalRssAdapter` is now a thin subclass. Added a browser-like
+  UA + Accept header to avoid spurious 403s on press feeds.
+- Smoke-tested every new feed URL and pruned the dead ones (Meta AI, NREL, Caltech, ScienceDaily
+  Plastic 404/DNS; fixed the Phys.org Materials slug). Added offline tests for source_type tagging,
+  vocabulary gating on feed lists, and Google News query encoding.
+
 ## Remaining
 
 - Rerun the GitHub Actions workflow with the new targeting + UI and confirm the Pages deployment shows
@@ -128,7 +143,9 @@ reflect the old broad targeting until a run is executed.
 - Config-driven model selection in `targeting.yaml`.
 - Hosted Voyage `voyage-3` embeddings.
 - SQLite committed to the repo as archive and dedup memory.
-- Phase 1 uses only Tier A MVP sources; Tier B/C sources remain disabled until Phase 3.
+- Tier A sources plus open-web Tier B/C (org blogs, university news, general web news, Google News)
+  are now enabled; all open-web feeds pass through the same polymer+AI vocabulary gate. Tier D
+  (social) remains deferred.
 
 ## Open Questions
 

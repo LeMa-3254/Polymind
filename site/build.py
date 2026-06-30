@@ -274,13 +274,22 @@ def render_index(config: dict, items: list, latest_weekly=None) -> str:
     site = config["site"]
     tagline = site.get("tagline") or site.get("description", "")
 
-    high_threshold = int(config.get("scoring", {}).get("high_quality_score", 80))
+    scoring = config.get("scoring", {})
+    # Per-card "heat" badge highlights on relevance; the featured section needs BOTH bars.
+    high_threshold = int(scoring.get("high_relevance_score", scoring.get("high_quality_score", 80)))
+    high_quality = int(scoring.get("high_quality_score", 80))
     terms = polymer_terms(config)
     ranked = sorted(items, key=lambda it: (0 if is_polymer(it, terms) else 1, *rank_key(it)))
     feed_items = ranked[:INDEX_LIMIT]
 
-    high = [it for it in feed_items if _num(field(it, "relevance_score")) >= high_threshold]
-    rest = [it for it in feed_items if _num(field(it, "relevance_score")) < high_threshold]
+    def is_high_signal(it) -> bool:
+        return (
+            _num(field(it, "relevance_score")) >= high_threshold
+            and _num(field(it, "quality_score")) >= high_quality
+        )
+
+    high = [it for it in feed_items if is_high_signal(it)]
+    rest = [it for it in feed_items if not is_high_signal(it)]
 
     # category counts for the tab bar
     counts: dict[str, int] = {}
@@ -294,7 +303,7 @@ def render_index(config: dict, items: list, latest_weekly=None) -> str:
 
     sections = []
     if high:
-        sections.append(render_section(f"High signal &middot; {high_threshold}+", high, high_threshold))
+        sections.append(render_section(f"High signal &middot; rel {high_threshold}+ &amp; qual {high_quality}+", high, high_threshold))
     if rest:
         sections.append(render_section("More this week" if high else "This week", rest, high_threshold))
     cards = "\n".join(sections) or '<p class="empty">No included items yet.</p>'
@@ -371,7 +380,7 @@ def render_archive(config: dict, items: list) -> str:
 </main>"""
 
     script = f"""<script>
-    const HIGH = {int(config.get("scoring", {}).get("high_quality_score", 80))};
+    const HIGH = {int(config.get("scoring", {}).get("high_relevance_score", config.get("scoring", {}).get("high_quality_score", 80)))};
     const items = {json_for_script([archive_item(item) for item in items])};
     const search = document.querySelector("#search");
     const source = document.querySelector("#source");
