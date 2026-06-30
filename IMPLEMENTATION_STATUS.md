@@ -12,12 +12,18 @@ The local directory is initialized as a git repository and pushed to `LeMa-3254/
 was made public so GitHub Pages can run on the current GitHub plan. Repository API secrets were added
 by the user.
 
-Two rounds of changes have since landed but have not yet been run through the pipeline or deployed:
-(1) a full static-site UI redesign with a ranked, polymer-first feed and a restructured weekly
-synthesis, and (2) a targeting refocus that narrows scope from general "AI + materials" to
-polymer-specific AI across seven defined categories. These are config/prompt/render changes only; they
-take effect on the next pipeline run. The current committed `data/tracker.db` and deployed site still
-reflect the old broad targeting until a run is executed.
+The UI redesign and polymer-specific targeting refocus are now live: the pipeline has been run
+through GitHub Actions with the new targeting plus the open-web sources, the whole archive has been
+re-scored onto the 0–100 scale, and the site is deployed and serving at
+`https://lema-3254.github.io/Polymind/`. A normal weekly run (367 fetched → 80 candidates → 35
+included) confirmed the new sources work end to end (Google News alone contributed 20 included items),
+and a follow-up `--rescore-all` maintenance run normalized the legacy 0–5 archive (re-scored 511
+items, 108 → 50 included, dropping the non-polymer back-catalog).
+
+The most recent work this session expanded ingestion to open-web sources, tightened the "High signal"
+featured section to require both high relevance and high quality, and added freshness enforcement so
+the feed shows only recent items. All of this is committed and pushed to `LeMa-3254/Polymind`; the
+freshness changes take effect on the next scheduled Monday run (redeploy intentionally deferred).
 
 ## Completed
 
@@ -121,13 +127,41 @@ reflect the old broad targeting until a run is executed.
 - Smoke-tested every new feed URL and pruned the dead ones (Meta AI, NREL, Caltech, ScienceDaily
   Plastic 404/DNS; fixed the Phys.org Materials slug). Added offline tests for source_type tagging,
   vocabulary gating on feed lists, and Google News query encoding.
+- Ran the live workflow twice to exercise the new sources: a normal weekly run, then a `--rescore-all`
+  pass to normalize the legacy 0–5 archive to 0–100. Three feeds 403'd/timed out on the CI runner IP
+  (Stanford News, Science Advances, arXiv cond-mat.soft) — isolated, non-fatal, worth watching.
+
+### Featured section: relevance AND quality
+- The "High signal" featured section now requires BOTH bars: `relevance >= high_relevance_score` AND
+  `quality >= high_quality_score` (both default 80), instead of the previous relevance-only test.
+  Quality was previously only a sort tiebreaker; it now gates the feature. Added `high_relevance_score`
+  to config; the per-card relevance "heat" badge still keys off relevance.
+- Verified with synthetic 0–100 items (only rel≥80 AND qual≥80 is featured) and on the live archive,
+  where exactly one item currently clears both bars.
+
+### Freshness enforcement
+- Added two complementary, config-driven recency gates so a weekly tracker actually shows fresh content:
+  - Ingest ceiling `meta.max_age_days` (default 30): drops any candidate whose publication date is
+    older than the ceiling before it is scored or stored. This is what bounds the RSS sources, which
+    carry no date filter of their own. Undated items pass (just fetched).
+  - Display window `site.feed_days` (default 30): the home feed and `feed.xml` show only items within
+    the window; the Archive and `index.json` keep the full history.
+- Verified against the live DB: home feed 48 → 14 cards (all current), archive unchanged at 51,
+  `feed.xml` 14 items. Added offline tests for `is_fresh` and `within_days`.
 
 ## Remaining
 
-- Rerun the GitHub Actions workflow with the new targeting + UI and confirm the Pages deployment shows
-  polymer-focused content tagged with the seven fixed themes (not yet triggered, by request).
+- Redeploy with the freshness gates on the next scheduled Monday run (deferred by request); confirm the
+  live front page then shows only items within `feed_days`.
+- Harden weekly freshness against missed/late runs: the cron (weekly) and `lookback_hours` (168h) are
+  aligned but have zero overlap, so a single skipped run leaves a permanent gap-week hole. Recommended
+  fix is to widen `lookback_hours` to ~240–336 (10–14 days); the 30-day dedup memory already prevents
+  the overlap from producing duplicates. Also decide whether the front page should be strictly weekly
+  (`feed_days: 7`) or stay a rolling month (`feed_days: 30`).
 - Review live scoring/enrichment outputs under the rewritten rubric; tune thresholds if the polymer
-  gate is too strict or too loose (re-filtering the old pool kept ~22 of 160 items).
+  gate is too strict or too loose.
+- Watch the CI-runner feed failures (Stanford News, Science Advances 403; arXiv cond-mat.soft timeout);
+  move to `disabled_feeds` or find accessible URLs if they persist.
 - Revisit disabled RSC/ACS journal RSS feeds or replace them with accessible source URLs.
 - Run Voyage embedding generation against live API credentials and verify duplicate behavior across repeated live runs.
 - Confirm the weekly synthesis is well-populated now that the window targets the last complete week and
@@ -146,8 +180,14 @@ reflect the old broad targeting until a run is executed.
 - Tier A sources plus open-web Tier B/C (org blogs, university news, general web news, Google News)
   are now enabled; all open-web feeds pass through the same polymer+AI vocabulary gate. Tier D
   (social) remains deferred.
+- "High signal" requires both high relevance and high quality (≥80 each); quality is no longer just a
+  ranking tiebreaker.
+- Freshness is enforced at ingest (`max_age_days`, default 30) and display (`feed_days`, default 30);
+  the Archive retains full history regardless.
 
 ## Open Questions
 
 - Which custom domain, if any, should be configured after GitHub Pages is live?
 - How will Anthropic ZDR be verified for the account/API configuration before production runs?
+- Should the front page be strictly weekly (`feed_days: 7`) or a rolling month (`feed_days: 30`), and
+  should `lookback_hours` gain overlap margin to survive a missed run?
