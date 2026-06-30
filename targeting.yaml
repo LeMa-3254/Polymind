@@ -12,7 +12,11 @@
 # ============================================================================
 
 meta:
-  lookback_hours: 168         # freshness window (7 days) — matches the weekly run cadence
+  lookback_hours: 168         # API-fetch window (7 days) — matches the weekly run cadence
+  # Hard freshness ceiling applied to EVERY source (incl. RSS feeds, which carry no date
+  # filter of their own): drop any candidate whose publication date is older than this before
+  # it is scored or stored. Items with no publication date pass (they were just fetched).
+  max_age_days: 30
   timezone: America/Los_Angeles
   contact_email: "tengteng3254@gmail.com"
 
@@ -26,6 +30,7 @@ site:
     A daily feed plus weekly synthesis of the latest AI tools and methods for
     polymer and materials development — fresh, sourced, and curated.
   url: "https://lema-3254.github.io/Polymind/"   # GitHub Pages project URL; custom domain later
+  feed_days: 30                                  # home feed + RSS show only items this recent; the Archive keeps everything
 
 # ----------------------------------------------------------------------------
 # TARGETING VOCABULARY  — the cross-product that defines "polymer + AI"

@@ -208,14 +208,33 @@ def build_site(config_path: str = "targeting.yaml", db_path: str = "data/tracker
         latest_weekly = latest_weekly_summary(db)
         all_weeklies = weekly_summaries(db)
 
-    (output / "index.html").write_text(render_index(config, items, latest_weekly), encoding="utf-8")
+    # The home feed and RSS are a *current* feed: show only recent items so old archive
+    # entries don't dominate the relevance ranking. The Archive and JSON export keep everything.
+    feed_days = int(config.get("site", {}).get("feed_days", 0) or 0)
+    recent = [item for item in items if within_days(item, feed_days)]
+
+    (output / "index.html").write_text(render_index(config, recent, latest_weekly), encoding="utf-8")
     (output / "archive.html").write_text(render_archive(config, items), encoding="utf-8")
     (output / "weekly.html").write_text(render_weekly(config, all_weeklies), encoding="utf-8")
     (output / "index.json").write_text(
         json.dumps([dict(item) for item in items], indent=2, sort_keys=True),
         encoding="utf-8",
     )
-    (output / "feed.xml").write_text(render_rss(config, items), encoding="utf-8")
+    (output / "feed.xml").write_text(render_rss(config, recent), encoding="utf-8")
+
+
+def within_days(item, days: int) -> bool:
+    """True if the item's effective date (published, else fetched) is within `days` of today.
+    days <= 0 disables the window. Undated items are treated as current."""
+    if days <= 0:
+        return True
+    value = field(item, "published_date") or field(item, "fetched_date")
+    if not value:
+        return True
+    try:
+        return (date.today() - date.fromisoformat(str(value)[:10])).days <= days
+    except ValueError:
+        return True
 
 
 # ---------------------------------------------------------------------------

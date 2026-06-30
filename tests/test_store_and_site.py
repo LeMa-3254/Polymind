@@ -117,6 +117,18 @@ class StoreTests(unittest.TestCase):
 
         self.assertIn("materials informatics property prediction", html)
 
+    def test_within_days_windows_by_effective_date(self):
+        from datetime import date, timedelta
+
+        recent = {"published_date": (date.today() - timedelta(days=10)).isoformat(), "fetched_date": None}
+        old = {"published_date": (date.today() - timedelta(days=200)).isoformat(), "fetched_date": None}
+        undated = {"published_date": None, "fetched_date": None}
+
+        self.assertTrue(site_build.within_days(recent, 30))
+        self.assertFalse(site_build.within_days(old, 30))
+        self.assertTrue(site_build.within_days(undated, 30))   # undated treated as current
+        self.assertTrue(site_build.within_days(old, 0))        # window disabled
+
     def test_build_site_writes_archive_page(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / "tracker.db"

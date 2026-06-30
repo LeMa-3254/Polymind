@@ -80,10 +80,27 @@ def run_pipeline(
     return 0
 
 
+def is_fresh(item: Item, config: dict) -> bool:
+    """Hard freshness ceiling: drop items older than meta.max_age_days. RSS sources carry no
+    date filter of their own, so this is what keeps stale feed entries out. Undated items pass
+    (they were just fetched and have no publication date to judge)."""
+    from datetime import date, datetime, timezone
+
+    max_age = int(config.get("meta", {}).get("max_age_days", 0) or 0)
+    if max_age <= 0 or not item.published_date:
+        return True
+    try:
+        age_days = (datetime.now(timezone.utc).date() - date.fromisoformat(item.published_date)).days
+    except ValueError:
+        return True
+    return age_days <= max_age
+
+
 def prefilter_candidates(items: list[Item], config: dict) -> list[Item]:
-    """Drop items that miss the keyword gate, then keep the most promising N (polymer-first,
+    """Drop stale and off-vocabulary items, then keep the most promising N (polymer-first,
     most recent) before any LLM scoring — fewer model calls, faster runs, tighter scope."""
-    gated = [item for item in items if vocabulary_match(item, config)]
+    fresh = [item for item in items if is_fresh(item, config)]
+    gated = [item for item in fresh if vocabulary_match(item, config)]
     boost_terms = [term.lower() for term in config.get("targeting", {}).get("polymer_boost_terms", [])]
 
     def is_polymer(item: Item) -> bool:

@@ -74,6 +74,28 @@ class PipelineRunTests(unittest.TestCase):
         self.assertEqual(run_count, 1)
         self.assertEqual(weekly_count, 1)
 
+    def test_is_fresh_drops_old_keeps_recent_and_undated(self):
+        from datetime import date, timedelta
+
+        config = {"meta": {"max_age_days": 30}}
+        recent = Item.from_source(
+            title="t", url="https://x/r", source_type="t", source_name="E", tier="A",
+            published_date=(date.today() - timedelta(days=5)).isoformat(),
+        )
+        old = Item.from_source(
+            title="t", url="https://x/o", source_type="t", source_name="E", tier="A",
+            published_date=(date.today() - timedelta(days=400)).isoformat(),
+        )
+        undated = Item.from_source(
+            title="t", url="https://x/u", source_type="t", source_name="E", tier="A",
+        )
+
+        self.assertTrue(pipeline_run.is_fresh(recent, config))
+        self.assertFalse(pipeline_run.is_fresh(old, config))
+        self.assertTrue(pipeline_run.is_fresh(undated, config))
+        # window disabled when max_age_days is unset/zero
+        self.assertTrue(pipeline_run.is_fresh(old, {"meta": {}}))
+
     def test_rescore_archive_drops_items_failing_current_gate(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
