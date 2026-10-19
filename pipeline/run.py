@@ -13,10 +13,11 @@ from config import load_config
 from models import Item
 from pipeline.dedup import deduplicate_items
 from pipeline.embeddings import embed_items
-from pipeline.enrich import enrich_items
+from pipeline.enrich import PLACEHOLDER_WHY, enrich_items
 from pipeline.ingest import ingest_enabled_sources
-from pipeline.score import score_item
-from pipeline.synth import last_complete_week_bounds, synthesize_week
+from pipeline.model_clients import build_anthropic_client
+from pipeline.score import is_fallback_score, score_item
+from pipeline.synth import is_fallback_synthesis, last_complete_week_bounds, synthesize_week
 from sources.base import vocabulary_match
 from store.db import (
     connect,
@@ -26,6 +27,7 @@ from store.db import (
     recent_embedding_memory,
     upsert_items,
     upsert_weekly_summary,
+    weekly_summaries,
 )
 
 
@@ -178,13 +180,78 @@ def rescore_archive(
     return 0
 
 
+def repair_fallbacks(
+    config_path: str = "targeting.yaml",
+    db_path: str = "data/tracker.db",
+    *,
+    model_client=None,
+) -> int:
+    """One-time maintenance after a model outage: redo the model steps that fell back to
+    bootstrap output. Re-scores fallback-scored items (duplicates stay dropped), re-enriches
+    included items still carrying the placeholder why-it-matters, and regenerates fallback
+    weekly syntheses. Model-written content is left untouched."""
+    client = model_client if model_client is not None else build_anthropic_client()
+    if client is None:
+        print("error: --repair-fallbacks needs ANTHROPIC_API_KEY; nothing changed", file=sys.stderr)
+        return 1
+    config = load_config(config_path)
+    token_usage: dict = {}
+    with connect(db_path) as db:
+        init_db(db)
+        items = [item_from_row(row) for row in db.execute("SELECT * FROM items WHERE status != 'dropped_dup'")]
+
+        rescore = [item for item in items if is_fallback_score(item.score_reason)]
+        for item in rescore:
+            score_item(item, config, model_client=client, token_usage=token_usage)
+        upsert_items(db, rescore)
+
+        reenrich = [item for item in items if item.status == "included" and item.why_it_matters == PLACEHOLDER_WHY]
+        enrich_config = {**config, "enrich": {**config.get("enrich", {}), "max_items_per_run": len(reenrich)}}
+        enrich_items(reenrich, enrich_config, model_client=client, token_usage=token_usage)
+        upsert_items(db, reenrich)
+
+        weeks = [row for row in weekly_summaries(db) if is_fallback_synthesis(row["synthesis_md"])]
+        for week in weeks:
+            weekly_items = included_items_between(db, start_date=week["week_start"], end_date=week["week_end"])
+            upsert_weekly_summary(
+                db,
+                week_start=week["week_start"],
+                week_end=week["week_end"],
+                synthesis_md=synthesize_week(weekly_items, config, model_client=client, token_usage=token_usage),
+                item_ids=[item["id"] for item in weekly_items],
+            )
+
+        log_run(
+            db,
+            counts={
+                "repair_rescored": len(rescore),
+                "repair_rescore_still_fallback": sum(1 for item in rescore if is_fallback_score(item.score_reason)),
+                "repair_reenriched": len(reenrich),
+                "repair_reenrich_still_placeholder": sum(1 for item in reenrich if item.why_it_matters == PLACEHOLDER_WHY),
+                "repair_resynthesized_weeks": len(weeks),
+                "repair_resynth_still_fallback": sum(
+                    1 for row in weekly_summaries(db) if is_fallback_synthesis(row["synthesis_md"])
+                ),
+            },
+            token_usage=token_usage,
+        )
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the Polymind tracker pipeline")
     parser.add_argument("--config", default="targeting.yaml")
     parser.add_argument("--db", default="data/tracker.db")
     parser.add_argument("--weekly-synthesis", action="store_true")
     parser.add_argument("--rescore-all", action="store_true", help="Re-score the whole archive against the current rubric")
+    parser.add_argument(
+        "--repair-fallbacks",
+        action="store_true",
+        help="Redo model scoring/enrichment/synthesis for stored items that got bootstrap fallbacks",
+    )
     args = parser.parse_args()
+    if args.repair_fallbacks:
+        return repair_fallbacks(config_path=args.config, db_path=args.db)
     if args.rescore_all:
         return rescore_archive(config_path=args.config, db_path=args.db)
     return run_pipeline(config_path=args.config, db_path=args.db, weekly_synthesis=args.weekly_synthesis)

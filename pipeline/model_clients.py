@@ -108,16 +108,24 @@ class AnthropicModelClient:
         user_prompt: str,
         max_tokens: int = 1024,
     ) -> tuple[dict[str, Any], dict[str, int]]:
-        message = retry_call(
-            lambda: self.client.messages.create(
-                model=model,
-                max_tokens=max_tokens,
-                temperature=0,
-                system=system_prompt,
-                messages=[{"role": "user", "content": user_prompt}],
-            )
+        kwargs = message_request(
+            model=model, system_prompt=system_prompt, user_prompt=user_prompt, max_tokens=max_tokens
         )
+        message = retry_call(lambda: self.client.messages.create(**kwargs))
         return parse_json_object(extract_message_text(message)), anthropic_usage(message)
+
+
+def message_request(*, model: str, system_prompt: str, user_prompt: str, max_tokens: int) -> dict[str, Any]:
+    # anthropic 1.x dropped `temperature` from messages.create(); the API still honours it for
+    # the configured Haiku 4.5 / Sonnet 4.5 models, so it travels in extra_body. (Opus 4.7+ and
+    # Sonnet 5+ reject it outright — drop it if targeting.yaml moves to one of those.)
+    return {
+        "model": model,
+        "max_tokens": max_tokens,
+        "system": system_prompt,
+        "messages": [{"role": "user", "content": user_prompt}],
+        "extra_body": {"temperature": 0},
+    }
 
 
 class VoyageEmbeddingClient:

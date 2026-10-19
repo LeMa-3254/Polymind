@@ -139,6 +139,63 @@ class PipelineRunTests(unittest.TestCase):
             self.assertEqual(statuses["Machine learning for polymer design"], "included")
             self.assertEqual(statuses["Machine learning for steel welding"], "dropped_lowscore")
 
+    def test_repair_fallbacks_redoes_only_fallback_output(self):
+        from pipeline.enrich import PLACEHOLDER_WHY
+        from pipeline.synth import fallback_synthesis
+        from store.db import init_db, upsert_items, upsert_weekly_summary
+
+        class FakeClient:
+            def complete_json(self, *, model, system_prompt, user_prompt, max_tokens):
+                return {
+                    "relevance": 85, "quality": 80, "reason": "Model reason.", "theme": "Property Prediction",
+                    "summary": "Model summary.", "why_it_matters": "Model why.",
+                    "synthesis_md": "## This week in brief\n- model\n\n## Trends\n### X\nModel trend.",
+                }, {"input_tokens": 1, "output_tokens": 1}
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            config_path = root / "targeting.yaml"
+            db_path = root / "tracker.db"
+            config_path.write_text(
+                "site: {name: Polymind, description: d, url: https://x/}\n"
+                "scoring: {model: s, min_score: 70}\nenrich: {model: e, max_items_per_run: 1}\nsynth: {model: y}\n",
+                encoding="utf-8",
+            )
+
+            def make(url, reason, why, status="included"):
+                item = Item.from_source(
+                    title=url, url=f"https://x/{url}", source_type="t", source_name="E", tier="A",
+                    published_date="2026-10-14", abstract="polymer ML",
+                )
+                item.score_reason, item.why_it_matters, item.summary, item.status = reason, why, "s", status
+                return item
+
+            broken = [make(f"broken{i}", "Model scoring failed; bootstrap fallback used: boom", PLACEHOLDER_WHY) for i in range(2)]
+            good = make("good", "Kept model reason.", "Kept model why.")
+            dup = make("dup", "Model scoring failed; bootstrap fallback used: boom", PLACEHOLDER_WHY, status="dropped_dup")
+            with connect(db_path) as db:
+                init_db(db)
+                upsert_items(db, [*broken, good, dup])
+                upsert_weekly_summary(
+                    db, week_start="2026-10-12", week_end="2026-10-18",
+                    synthesis_md=fallback_synthesis([{"title": "t", "url": "https://x/t"}]), item_ids=[],
+                )
+
+            exit_code = pipeline_run.repair_fallbacks(str(config_path), str(db_path), model_client=FakeClient())
+
+            with connect(db_path) as db:
+                rows = {row["title"]: row for row in db.execute("SELECT * FROM items")}
+                synthesis = db.execute("SELECT synthesis_md FROM weekly_summaries").fetchone()[0]
+        self.assertEqual(exit_code, 0)
+        for title in ("broken0", "broken1"):  # beyond max_items_per_run, still re-enriched
+            self.assertEqual(rows[title]["score_reason"], "Model reason.")
+            self.assertEqual(rows[title]["why_it_matters"], "Model why.")
+        self.assertEqual(rows["good"]["why_it_matters"], "Kept model why.")
+        self.assertEqual(rows["good"]["score_reason"], "Kept model reason.")
+        self.assertEqual(rows["dup"]["status"], "dropped_dup")
+        self.assertEqual(rows["dup"]["why_it_matters"], PLACEHOLDER_WHY)
+        self.assertIn("Model trend.", synthesis)
+
 
 if __name__ == "__main__":
     unittest.main()

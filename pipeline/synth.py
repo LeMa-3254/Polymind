@@ -3,9 +3,17 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import date, timedelta
 import json
+import sys
 from typing import Any
 
 from pipeline.model_clients import add_token_usage, build_anthropic_client, read_prompt
+
+# The model's synthesis uses "## Trends"; only the offline fallback writes this heading.
+FALLBACK_TRENDS_HEADING = "## Trends by theme"
+
+
+def is_fallback_synthesis(synthesis_md: str | None) -> bool:
+    return FALLBACK_TRENDS_HEADING in (synthesis_md or "")
 
 
 def last_complete_week_bounds(today: date | None = None) -> tuple[str, str]:
@@ -41,7 +49,8 @@ def synthesize_week(
             user_prompt=json.dumps([item_payload(item) for item in items], indent=2, sort_keys=True),
             max_tokens=1600,
         )
-    except Exception:
+    except Exception as exc:
+        print(f"warning: model synthesis failed, using fallback: {exc}", file=sys.stderr)
         return fallback_synthesis(items)
     add_token_usage(token_usage, "anthropic_synthesis", usage)
     return str(result.get("synthesis_md") or result.get("synthesis") or fallback_synthesis(items))
@@ -61,7 +70,7 @@ def fallback_synthesis(items: list[Any]) -> str:
     for item in ranked:
         grouped[str(item_value(item, "theme") or "Materials AI")].append(item)
 
-    lines.append("## Trends by theme")
+    lines.append(FALLBACK_TRENDS_HEADING)
     lines.append("")
     for theme, group in sorted(grouped.items()):
         lines.append(f"### {theme}")

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+import sys
 from typing import Any
 
 from models import Item
 from pipeline.model_clients import add_token_usage, build_anthropic_client, read_prompt
+
+PLACEHOLDER_WHY = "Potentially relevant to AI-enabled polymer and materials development."
 
 
 def enrich_items(
@@ -27,7 +30,8 @@ def enrich_items(
         previous_why = item.why_it_matters
         try:
             enrich_item_with_model(item, config, client=client, token_usage=token_usage)
-        except Exception:
+        except Exception as exc:
+            print(f"warning: model enrichment failed for {item.url}: {exc}", file=sys.stderr)
             item.summary = previous_summary
             item.why_it_matters = previous_why
     return items
@@ -50,16 +54,13 @@ def enrich_item_with_model(
     )
     add_token_usage(token_usage, "anthropic_enrichment", usage)
     item.summary = str(result.get("summary") or item.abstract or item.title)
-    item.why_it_matters = str(
-        result.get("why_it_matters")
-        or "Potentially relevant to AI-enabled polymer and materials development."
-    )
+    item.why_it_matters = str(result.get("why_it_matters") or PLACEHOLDER_WHY)
     return item
 
 
 def bootstrap_enrich_item(item: Item) -> Item:
     item.summary = item.abstract or item.title
-    item.why_it_matters = "Potentially relevant to AI-enabled polymer and materials development."
+    item.why_it_matters = PLACEHOLDER_WHY
     return item
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from typing import Any
 
 from models import Item
@@ -20,6 +21,7 @@ def score_item(
         try:
             return score_item_with_model(item, config, client=client, token_usage=token_usage)
         except Exception as exc:
+            print(f"warning: model scoring failed for {item.url}: {exc}", file=sys.stderr)
             bootstrap_score_item(item, config)
             item.score_reason = f"Model scoring failed; bootstrap fallback used: {exc}"
             return item
@@ -47,6 +49,11 @@ def score_item_with_model(
 
 
 TIER_POINTS = {"A": 15, "B": 8, "C": 0, "D": -15}
+FALLBACK_REASON_PREFIXES = ("Model scoring failed", "Keyword/tier bootstrap")
+
+
+def is_fallback_score(reason: str | None) -> bool:
+    return (reason or "").startswith(FALLBACK_REASON_PREFIXES)
 
 
 def bootstrap_score_item(item: Item, config: dict[str, Any]) -> Item:

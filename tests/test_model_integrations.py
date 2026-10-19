@@ -1,9 +1,10 @@
+import inspect
 import unittest
 
 from models import Item
 from pipeline.embeddings import embed_items
 from pipeline.enrich import enrich_items
-from pipeline.model_clients import add_token_usage, parse_json_object, strip_code_fence
+from pipeline.model_clients import add_token_usage, message_request, parse_json_object, strip_code_fence
 from pipeline.score import score_item
 
 
@@ -70,6 +71,16 @@ class ModelIntegrationTests(unittest.TestCase):
             {"summary": "A", "why_it_matters": "B"},
         )
         self.assertEqual(strip_code_fence(text).splitlines()[0].strip(), '{"summary": "A", "why_it_matters": "B"}')
+
+    def test_message_request_matches_installed_sdk_signature(self):
+        # The fakes below never touch the real SDK, so an SDK upgrade that drops a parameter
+        # (anthropic 1.x removed `temperature`) would otherwise only surface as silent fallbacks.
+        from anthropic import Anthropic
+
+        create = Anthropic(api_key="offline-test").messages.create
+        kwargs = message_request(model="m", system_prompt="s", user_prompt="u", max_tokens=8)
+
+        inspect.signature(create).bind(**kwargs)
 
     def test_score_item_uses_injected_model_client_and_tracks_usage(self):
         item = make_item()
